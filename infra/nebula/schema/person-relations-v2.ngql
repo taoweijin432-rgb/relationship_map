@@ -1,0 +1,26 @@
+-- Model uuid-relations-v2 = uuid-facts-v1.ngql + this file in a NEW space.
+-- Materialize only after valid fact edges have been loaded and checked.
+-- Store the undirected business relation once, from lower VID to higher VID.
+-- Relation rank is local to (type,src,dst) and snapshot, NOT graph_edge_mapping.id.
+
+CREATE EDGE same_company (
+    entity_vid STRING NOT NULL,
+    left_fact_rank INT64 NOT NULL,
+    right_fact_rank INT64 NOT NULL
+) COMMENT = 'Same company evidence pair, no claim of acquaintance';
+
+CREATE EDGE company_overlap (
+    entity_vid STRING NOT NULL,
+    left_fact_rank INT64 NOT NULL,
+    right_fact_rank INT64 NOT NULL,
+    overlap_start_month INT32 NOT NULL,
+    overlap_end_month INT32 NOT NULL
+) COMMENT = 'Overlapping work evidence pair at projection reference month';
+
+CREATE EDGE same_school (
+    entity_vid STRING NOT NULL,
+    left_fact_rank INT64 NOT NULL,
+    right_fact_rank INT64 NOT NULL
+) COMMENT = 'Same school evidence pair, no assumed temporal overlap';
+
+-- No persisted indirect relations, generic acquaintance edges, property indexes or TTL.

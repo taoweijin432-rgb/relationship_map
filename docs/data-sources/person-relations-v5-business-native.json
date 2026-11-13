@@ -1,0 +1,1012 @@
+{
+  "model": "uuid-relations-v5",
+  "date": "2026-11-06",
+  "status": "passed",
+  "reference_month": 202611,
+  "projections": [
+    {
+      "space": "relationship_lab_ddl_427a56b98200",
+      "corrected": false,
+      "dropped": true,
+      "checks": [
+        {
+          "name": "人物属性白名单及六节点完整回读",
+          "passed": true,
+          "description": [
+            {
+              "Field": "source_system",
+              "Type": "string",
+              "Null": "NO",
+              "Default": null,
+              "Comment": null
+            },
+            {
+              "Field": "serial_number",
+              "Type": "string",
+              "Null": "NO",
+              "Default": null,
+              "Comment": null
+            }
+          ],
+          "actual": [
+            {
+              "vid": "p:expert:101",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000101"
+              }
+            },
+            {
+              "vid": "p:resume:102",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000102"
+              }
+            },
+            {
+              "vid": "p:resume:103",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000103"
+              }
+            },
+            {
+              "vid": "p:expert:104",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000104"
+              }
+            },
+            {
+              "vid": "p:expert:105",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000105"
+              }
+            },
+            {
+              "vid": "p:resume:106",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000106"
+              }
+            }
+          ]
+        },
+        {
+          "name": "旧姓名字段写入被拒绝",
+          "passed": true,
+          "error_code": -1009
+        },
+        {
+          "name": "业务编号与人物来源一起回读",
+          "passed": true,
+          "sql": "FETCH PROP ON person \"p:expert:101\" YIELD properties(vertex).source_system AS source,properties(vertex).serial_number AS number",
+          "expected": [
+            {
+              "source": "expert",
+              "number": "E000000000000000101"
+            }
+          ],
+          "actual": [
+            {
+              "source": "expert",
+              "number": "E000000000000000101"
+            }
+          ]
+        },
+        {
+          "name": "重复任职职位与经历组键保持分离",
+          "passed": true,
+          "sql": "GO FROM \"p:expert:101\" OVER worked_at YIELD rank(edge) AS fact_rank,worked_at.position_title AS title,worked_at.experience_key AS experience_key | ORDER BY $-.fact_rank | LIMIT 100",
+          "expected": [
+            {
+              "fact_rank": 7001,
+              "title": "工程师",
+              "experience_key": "expert:experts_work_experience:1"
+            },
+            {
+              "fact_rank": 7002,
+              "title": "分析师",
+              "experience_key": "expert:experts_work_experience:2"
+            }
+          ],
+          "actual": [
+            {
+              "fact_rank": 7001,
+              "title": "工程师",
+              "experience_key": "expert:experts_work_experience:1"
+            },
+            {
+              "fact_rank": 7002,
+              "title": "分析师",
+              "experience_key": "expert:experts_work_experience:2"
+            }
+          ]
+        },
+        {
+          "name": "学校与专业按同条教育经历配对",
+          "passed": true,
+          "sql": "MATCH (p:person)-[s:studied_at]->(school:school),(p)-[m:studied_major]->(major:major) WHERE id(p)==\"p:expert:101\" AND s.experience_key==m.experience_key RETURN s.experience_key AS experience_key,s.education_level AS level,s.is_regular_enrollment AS enrollment,m.education_level==s.education_level AS consistent LIMIT 100",
+          "expected": [
+            {
+              "experience_key": "expert:experts_education_experience:11",
+              "level": "硕士",
+              "enrollment": "是",
+              "consistent": true
+            }
+          ],
+          "actual": [
+            {
+              "experience_key": "expert:experts_education_experience:11",
+              "level": "硕士",
+              "enrollment": "是",
+              "consistent": true
+            }
+          ]
+        },
+        {
+          "name": "完整人工预期和全量人物边回读",
+          "passed": true,
+          "evidence_edges": 15
+        },
+        {
+          "name": "双方经历引用与重复任职",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" AND id(b)==\"p:resume:102\" RETURN r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank ORDER BY left_rank,right_rank LIMIT 100",
+          "expected": [
+            {
+              "left_rank": 7001,
+              "right_rank": 7003
+            },
+            {
+              "left_rank": 7002,
+              "right_rank": 7003
+            }
+          ],
+          "actual": [
+            {
+              "left_rank": 7001,
+              "right_rank": 7003
+            },
+            {
+              "left_rank": 7002,
+              "right_rank": 7003
+            }
+          ]
+        },
+        {
+          "name": "反向读取仍保持原证据归属与交集",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:company_overlap]-(b:person) WHERE id(a)==\"p:resume:102\" AND id(b)==\"p:expert:101\" RETURN r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank, r.overlap_start_month AS start_month,r.overlap_end_month AS end_month LIMIT 100",
+          "expected": [
+            {
+              "left_rank": 7001,
+              "right_rank": 7003,
+              "start_month": 202101,
+              "end_month": 202212
+            }
+          ],
+          "actual": [
+            {
+              "left_rank": 7001,
+              "right_rank": 7003,
+              "start_month": 202101,
+              "end_month": 202212
+            }
+          ]
+        },
+        {
+          "name": "直接查询使用人物边",
+          "passed": true,
+          "sql": "MATCH (a:person)-[:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" RETURN DISTINCT id(b) AS person_id ORDER BY person_id LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:104"
+            },
+            {
+              "person_id": "p:resume:102"
+            },
+            {
+              "person_id": "p:resume:103"
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:104"
+            },
+            {
+              "person_id": "p:resume:102"
+            },
+            {
+              "person_id": "p:resume:103"
+            }
+          ]
+        },
+        {
+          "name": "两条人物边连接一位中间人物",
+          "passed": true,
+          "sql": "MATCH (a:person)-[:same_company]-(m:person)-[:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" AND id(b)==\"p:expert:105\" AND id(m)!=id(a) AND id(m)!=id(b) RETURN DISTINCT id(m) AS middle_id ORDER BY middle_id LIMIT 100",
+          "expected": [
+            {
+              "middle_id": "p:resume:102"
+            }
+          ],
+          "actual": [
+            {
+              "middle_id": "p:resume:102"
+            }
+          ]
+        },
+        {
+          "name": "没有教育时间仍预计算同校",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_school]-(b:person) WHERE id(a)==\"p:expert:101\" RETURN id(b) AS person_id,r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:105",
+              "left_rank": 8001,
+              "right_rank": 8002
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:105",
+              "left_rank": 8001,
+              "right_rank": 8002
+            }
+          ]
+        },
+        {
+          "name": "同专业不要求共同学校或教育时间且反向证据归属不变",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_major]-(b:person) WHERE id(a)==\"p:resume:102\" RETURN id(b) AS person_id,r.entity_vid AS major_vid,r.left_fact_rank AS left_rank,r.right_fact_rank AS right_rank LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:101",
+              "major_vid": "e:44444444-4444-4444-8444-444444444444",
+              "left_rank": 9001,
+              "right_rank": 9002
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:101",
+              "major_vid": "e:44444444-4444-4444-8444-444444444444",
+              "left_rank": 9001,
+              "right_rank": 9002
+            }
+          ]
+        }
+      ],
+      "budget_failure_before_relation_writes": true,
+      "counts": {
+        "same_company": 12,
+        "company_overlap": 1,
+        "same_school": 1,
+        "same_major": 1
+      },
+      "derived_rows": [
+        {
+          "kind": "company_overlap",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7001,
+          "right_fact_rank": 7003,
+          "overlap_start_month": 202101,
+          "overlap_end_month": 202212,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:expert:104",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7001,
+          "right_fact_rank": 7005,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:expert:104",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7005,
+          "rank": 2
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7001,
+          "right_fact_rank": 7003,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7003,
+          "rank": 2
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7001,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7004,
+          "rank": 2
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:104",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7005,
+          "right_fact_rank": 7003,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:104",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7005,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:105",
+          "target": "p:resume:102",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7006,
+          "right_fact_rank": 7007,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:105",
+          "target": "p:resume:106",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7006,
+          "right_fact_rank": 7008,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:resume:102",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7003,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:resume:102",
+          "target": "p:resume:106",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7007,
+          "right_fact_rank": 7008,
+          "rank": 1
+        },
+        {
+          "kind": "same_major",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:44444444-4444-4444-8444-444444444444",
+          "left_fact_rank": 9001,
+          "right_fact_rank": 9002,
+          "rank": 1
+        },
+        {
+          "kind": "same_school",
+          "source": "p:expert:101",
+          "target": "p:expert:105",
+          "entity_vid": "e:33333333-3333-4333-8333-333333333333",
+          "left_fact_rank": 8001,
+          "right_fact_rank": 8002,
+          "rank": 1
+        }
+      ],
+      "edge_descriptions": {
+        "same_company": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "company_overlap": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "overlap_start_month",
+            "Type": "int32",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "overlap_end_month",
+            "Type": "int32",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "same_school": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "same_major": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ]
+      }
+    },
+    {
+      "space": "relationship_lab_ddl_f8fbb3df51a0",
+      "corrected": true,
+      "dropped": true,
+      "checks": [
+        {
+          "name": "人物属性白名单及六节点完整回读",
+          "passed": true,
+          "description": [
+            {
+              "Field": "source_system",
+              "Type": "string",
+              "Null": "NO",
+              "Default": null,
+              "Comment": null
+            },
+            {
+              "Field": "serial_number",
+              "Type": "string",
+              "Null": "NO",
+              "Default": null,
+              "Comment": null
+            }
+          ],
+          "actual": [
+            {
+              "vid": "p:expert:101",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000101"
+              }
+            },
+            {
+              "vid": "p:resume:102",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000102"
+              }
+            },
+            {
+              "vid": "p:resume:103",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000103"
+              }
+            },
+            {
+              "vid": "p:expert:104",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000104"
+              }
+            },
+            {
+              "vid": "p:expert:105",
+              "attrs": {
+                "source_system": "expert",
+                "serial_number": "E000000000000000105"
+              }
+            },
+            {
+              "vid": "p:resume:106",
+              "attrs": {
+                "source_system": "resume",
+                "serial_number": "R000000000000000106"
+              }
+            }
+          ]
+        },
+        {
+          "name": "旧姓名字段写入被拒绝",
+          "passed": true,
+          "error_code": -1009
+        },
+        {
+          "name": "业务编号与人物来源一起回读",
+          "passed": true,
+          "sql": "FETCH PROP ON person \"p:expert:101\" YIELD properties(vertex).source_system AS source,properties(vertex).serial_number AS number",
+          "expected": [
+            {
+              "source": "expert",
+              "number": "E000000000000000101"
+            }
+          ],
+          "actual": [
+            {
+              "source": "expert",
+              "number": "E000000000000000101"
+            }
+          ]
+        },
+        {
+          "name": "重复任职职位与经历组键保持分离",
+          "passed": true,
+          "sql": "GO FROM \"p:expert:101\" OVER worked_at YIELD rank(edge) AS fact_rank,worked_at.position_title AS title,worked_at.experience_key AS experience_key | ORDER BY $-.fact_rank | LIMIT 100",
+          "expected": [
+            {
+              "fact_rank": 7001,
+              "title": "工程师",
+              "experience_key": "expert:experts_work_experience:1"
+            },
+            {
+              "fact_rank": 7002,
+              "title": "分析师",
+              "experience_key": "expert:experts_work_experience:2"
+            }
+          ],
+          "actual": [
+            {
+              "fact_rank": 7001,
+              "title": "工程师",
+              "experience_key": "expert:experts_work_experience:1"
+            },
+            {
+              "fact_rank": 7002,
+              "title": "分析师",
+              "experience_key": "expert:experts_work_experience:2"
+            }
+          ]
+        },
+        {
+          "name": "学校与专业按同条教育经历配对",
+          "passed": true,
+          "sql": "MATCH (p:person)-[s:studied_at]->(school:school),(p)-[m:studied_major]->(major:major) WHERE id(p)==\"p:expert:101\" AND s.experience_key==m.experience_key RETURN s.experience_key AS experience_key,s.education_level AS level,s.is_regular_enrollment AS enrollment,m.education_level==s.education_level AS consistent LIMIT 100",
+          "expected": [
+            {
+              "experience_key": "expert:experts_education_experience:11",
+              "level": "硕士",
+              "enrollment": "是",
+              "consistent": true
+            }
+          ],
+          "actual": [
+            {
+              "experience_key": "expert:experts_education_experience:11",
+              "level": "硕士",
+              "enrollment": "是",
+              "consistent": true
+            }
+          ]
+        },
+        {
+          "name": "完整人工预期和全量人物边回读",
+          "passed": true,
+          "evidence_edges": 11
+        },
+        {
+          "name": "双方经历引用与重复任职",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" AND id(b)==\"p:resume:102\" RETURN r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank ORDER BY left_rank,right_rank LIMIT 100",
+          "expected": [
+            {
+              "left_rank": 7002,
+              "right_rank": 7003
+            }
+          ],
+          "actual": [
+            {
+              "left_rank": 7002,
+              "right_rank": 7003
+            }
+          ]
+        },
+        {
+          "name": "反向读取仍保持原证据归属与交集",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:company_overlap]-(b:person) WHERE id(a)==\"p:resume:102\" AND id(b)==\"p:expert:101\" RETURN r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank, r.overlap_start_month AS start_month,r.overlap_end_month AS end_month LIMIT 100",
+          "expected": [],
+          "actual": []
+        },
+        {
+          "name": "直接查询使用人物边",
+          "passed": true,
+          "sql": "MATCH (a:person)-[:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" RETURN DISTINCT id(b) AS person_id ORDER BY person_id LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:104"
+            },
+            {
+              "person_id": "p:resume:102"
+            },
+            {
+              "person_id": "p:resume:103"
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:104"
+            },
+            {
+              "person_id": "p:resume:102"
+            },
+            {
+              "person_id": "p:resume:103"
+            }
+          ]
+        },
+        {
+          "name": "两条人物边连接一位中间人物",
+          "passed": true,
+          "sql": "MATCH (a:person)-[:same_company]-(m:person)-[:same_company]-(b:person) WHERE id(a)==\"p:expert:101\" AND id(b)==\"p:expert:105\" AND id(m)!=id(a) AND id(m)!=id(b) RETURN DISTINCT id(m) AS middle_id ORDER BY middle_id LIMIT 100",
+          "expected": [
+            {
+              "middle_id": "p:resume:102"
+            }
+          ],
+          "actual": [
+            {
+              "middle_id": "p:resume:102"
+            }
+          ]
+        },
+        {
+          "name": "没有教育时间仍预计算同校",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_school]-(b:person) WHERE id(a)==\"p:expert:101\" RETURN id(b) AS person_id,r.left_fact_rank AS left_rank, r.right_fact_rank AS right_rank LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:105",
+              "left_rank": 8001,
+              "right_rank": 8002
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:105",
+              "left_rank": 8001,
+              "right_rank": 8002
+            }
+          ]
+        },
+        {
+          "name": "同专业不要求共同学校或教育时间且反向证据归属不变",
+          "passed": true,
+          "sql": "MATCH (a:person)-[r:same_major]-(b:person) WHERE id(a)==\"p:resume:102\" RETURN id(b) AS person_id,r.entity_vid AS major_vid,r.left_fact_rank AS left_rank,r.right_fact_rank AS right_rank LIMIT 100",
+          "expected": [
+            {
+              "person_id": "p:expert:101",
+              "major_vid": "e:44444444-4444-4444-8444-444444444444",
+              "left_rank": 9001,
+              "right_rank": 9002
+            }
+          ],
+          "actual": [
+            {
+              "person_id": "p:expert:101",
+              "major_vid": "e:44444444-4444-4444-8444-444444444444",
+              "left_rank": 9001,
+              "right_rank": 9002
+            }
+          ]
+        }
+      ],
+      "budget_failure_before_relation_writes": true,
+      "counts": {
+        "same_company": 9,
+        "company_overlap": 0,
+        "same_school": 1,
+        "same_major": 1
+      },
+      "derived_rows": [
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:expert:104",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7005,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7003,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:101",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7002,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:104",
+          "target": "p:resume:102",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7005,
+          "right_fact_rank": 7003,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:104",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7005,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:105",
+          "target": "p:resume:102",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7006,
+          "right_fact_rank": 7007,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:expert:105",
+          "target": "p:resume:106",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7006,
+          "right_fact_rank": 7008,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:resume:102",
+          "target": "p:resume:103",
+          "entity_vid": "e:11111111-1111-4111-8111-111111111111",
+          "left_fact_rank": 7003,
+          "right_fact_rank": 7004,
+          "rank": 1
+        },
+        {
+          "kind": "same_company",
+          "source": "p:resume:102",
+          "target": "p:resume:106",
+          "entity_vid": "e:22222222-2222-4222-8222-222222222222",
+          "left_fact_rank": 7007,
+          "right_fact_rank": 7008,
+          "rank": 1
+        },
+        {
+          "kind": "same_major",
+          "source": "p:expert:101",
+          "target": "p:resume:102",
+          "entity_vid": "e:44444444-4444-4444-8444-444444444444",
+          "left_fact_rank": 9001,
+          "right_fact_rank": 9002,
+          "rank": 1
+        },
+        {
+          "kind": "same_school",
+          "source": "p:expert:101",
+          "target": "p:expert:105",
+          "entity_vid": "e:33333333-3333-4333-8333-333333333333",
+          "left_fact_rank": 8001,
+          "right_fact_rank": 8002,
+          "rank": 1
+        }
+      ],
+      "edge_descriptions": {
+        "same_company": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "company_overlap": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "overlap_start_month",
+            "Type": "int32",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "overlap_end_month",
+            "Type": "int32",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "same_school": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ],
+        "same_major": [
+          {
+            "Field": "entity_vid",
+            "Type": "string",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "left_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          },
+          {
+            "Field": "right_fact_rank",
+            "Type": "int64",
+            "Null": "NO",
+            "Default": null,
+            "Comment": null
+          }
+        ]
+      }
+    }
+  ],
+  "base_sha256": "5439a2777d6e928ca37318b2aaa8376d23207b2e03454d7526daf7e503b8bb2f",
+  "extension_sha256": "0a6c174e551e445cc9615eeba6d90593c16ad562fd82726679ac9f874751d73a",
+  "expected_sha256": "2721220e56fa9ec9b4cfb922ad29a062a61fcec8af62d93b5497d45385cf0d39",
+  "scope": "fictional graph-only import demo, no SQL/API integration or production capacity"
+}

@@ -1,0 +1,128 @@
+{
+  "data_mode": "mock",
+  "base_digest": "def3e6ec6076bf4c3819b49df8630dc0ad93bb080505aa48e091ca1a88b4194c",
+  "at": "2026-11-06T09:00:00.000000",
+  "corrections": [
+    {
+      "table": "experts_work_experience",
+      "id": 1,
+      "expected": {
+        "deleted_at": null
+      },
+      "values": {
+        "deleted_at": "2026-11-06T09:00:00.000000"
+      },
+      "reason": "模拟上游确认原工作经历失效"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1001,
+      "expected": {
+        "deleted_at": null
+      },
+      "values": {
+        "deleted_at": "2026-11-06T09:00:00.000000"
+      },
+      "reason": "失效经历公司槽位"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1002,
+      "expected": {
+        "deleted_at": null
+      },
+      "values": {
+        "deleted_at": "2026-11-06T09:00:00.000000"
+      },
+      "reason": "失效经历职位槽位"
+    },
+    {
+      "table": "experts_work_experience",
+      "id": 19,
+      "expected": {
+        "expert_id": 1
+      },
+      "values": {
+        "expert_id": 5
+      },
+      "reason": "模拟上游提供人物归属纠正，不进行身份识别"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1241,
+      "expected": {
+        "source_person_id": 1
+      },
+      "values": {
+        "source_person_id": 5
+      },
+      "reason": "同条经历公司槽位移归属并保留Rank"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1242,
+      "expected": {
+        "source_person_id": 1
+      },
+      "values": {
+        "source_person_id": 5
+      },
+      "reason": "同条经历职位槽位移归属并保留Rank"
+    },
+    {
+      "table": "experts_education_experience",
+      "id": 1,
+      "expected": {
+        "school_name": "模拟标准学校3"
+      },
+      "values": {
+        "school_name": "模拟标准学校2"
+      },
+      "reason": "模拟上游纠正学校目标"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1003,
+      "expected": {
+        "entity_id": 308
+      },
+      "values": {
+        "entity_id": 309
+      },
+      "reason": "学校槽位保留ID，改到已确认学校"
+    },
+    {
+      "table": "resume_work_experience",
+      "id": 43,
+      "expected": {
+        "company_name": "模拟标准公司1"
+      },
+      "values": {
+        "company_name": "模拟标准公司2"
+      },
+      "reason": "模拟上游纠正公司，不按名称自动归一"
+    },
+    {
+      "table": "Relationship_Graph_edge_mapping",
+      "id": 1243,
+      "expected": {
+        "entity_id": 307
+      },
+      "values": {
+        "entity_id": 304
+      },
+      "reason": "公司槽位保留Rank，旧终点应从新图消失"
+    },
+    {
+      "table": "Relationship_Graph_entity",
+      "id": 304,
+      "expected": {
+        "canonical_name": "模拟标准公司2"
+      },
+      "values": {
+        "canonical_name": "模拟标准公司2（更名演练）"
+      },
+      "reason": "实体更名保留长期ID和旧别名"
+    }
+  ]
+}

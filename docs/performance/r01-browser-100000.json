@@ -1,0 +1,2169 @@
+{
+  "report_version": "1",
+  "browser": "156.0.8078.80",
+  "warning": "本机 Chrome、Vite 开发服务、串行交互；非生产静态包性能或并发容量，未清空操作系统缓存",
+  "samples": [
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 550,
+      "entity_lookup_ms": 0,
+      "selection_to_graph_ms": 0,
+      "long_tasks": [
+        {
+          "startTime": 150.20000004768372,
+          "duration": 94
+        }
+      ],
+      "largest_long_task_ms": 94
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 314,
+      "entity_lookup_ms": 370,
+      "selection_to_graph_ms": 381,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 313,
+      "entity_lookup_ms": 368,
+      "selection_to_graph_ms": 398,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 312,
+      "entity_lookup_ms": 0,
+      "selection_to_graph_ms": 0,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 281,
+      "entity_lookup_ms": 360,
+      "selection_to_graph_ms": 373,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 298,
+      "entity_lookup_ms": 365,
+      "selection_to_graph_ms": 386,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 313,
+      "entity_lookup_ms": 0,
+      "selection_to_graph_ms": 0,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 313,
+      "entity_lookup_ms": 361,
+      "selection_to_graph_ms": 372,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "data_version": "scale-v1-100000-42",
+      "active_people": 98969,
+      "navigation_ready_ms": 300,
+      "entity_lookup_ms": 362,
+      "selection_to_graph_ms": 390,
+      "long_tasks": [],
+      "largest_long_task_ms": 0
+    }
+  ],
+  "network": [
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692498955.984,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.023,
+        "responseStart": 64.483,
+        "responseEnd": 64.901
+      },
+      "server_timing": "app;dur=13.7"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692498955.92,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.026,
+        "responseStart": 65.554,
+        "responseEnd": 65.898
+      },
+      "server_timing": "app;dur=17.2"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692498956.0398,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.022,
+        "responseStart": 65.871,
+        "responseEnd": 66.233
+      },
+      "server_timing": "app;dur=17.7"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692498955.792,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.092,
+        "responseStart": 67.894,
+        "responseEnd": 68.174
+      },
+      "server_timing": "app;dur=20.3"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692498955.719,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.142,
+        "responseStart": 132.875,
+        "responseEnd": 133.165
+      },
+      "server_timing": "app;dur=90.9"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692499123.261,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.087,
+        "responseStart": 60.15,
+        "responseEnd": 60.433
+      },
+      "server_timing": "app;dur=57.2"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692499192.1548,
+        "domainLookupStart": 0.058,
+        "domainLookupEnd": 0.062,
+        "connectStart": 0.062,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.233,
+        "requestStart": 0.262,
+        "responseStart": 4.177,
+        "responseEnd": 4.443
+      },
+      "server_timing": "app;dur=2.5"
+    },
+    {
+      "round": 0,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692499192.324,
+        "domainLookupStart": 0.016,
+        "domainLookupEnd": 0.017,
+        "connectStart": 0.017,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.105,
+        "requestStart": 0.117,
+        "responseStart": 5.995,
+        "responseEnd": 6.307
+      },
+      "server_timing": "app;dur=4.1"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692499356.762,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.025,
+        "responseStart": 6.921,
+        "responseEnd": 7.346
+      },
+      "server_timing": "app;dur=3.9"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692499356.817,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.024,
+        "responseStart": 7.571,
+        "responseEnd": 7.879
+      },
+      "server_timing": "app;dur=4.8"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692499356.7,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.028,
+        "responseStart": 8.679,
+        "responseEnd": 9.011
+      },
+      "server_timing": "app;dur=6.4"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692499356.572,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.097,
+        "responseStart": 9.593,
+        "responseEnd": 9.932
+      },
+      "server_timing": "app;dur=7.3"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692499356.532,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.113,
+        "responseStart": 73.72,
+        "responseEnd": 73.963
+      },
+      "server_timing": "app;dur=71.5"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692499459.362,
+        "domainLookupStart": 0.043,
+        "domainLookupEnd": 0.048,
+        "connectStart": 0.048,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.215,
+        "requestStart": 0.247,
+        "responseStart": 59.732,
+        "responseEnd": 60.028
+      },
+      "server_timing": "app;dur=57.8"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692499519.751,
+        "domainLookupStart": 0.271,
+        "domainLookupEnd": 0.272,
+        "connectStart": 0.272,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.351,
+        "requestStart": 0.405,
+        "responseStart": 5.253,
+        "responseEnd": 5.498
+      },
+      "server_timing": "app;dur=2.9"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692499519.805,
+        "domainLookupStart": 0.026,
+        "domainLookupEnd": 0.147,
+        "connectStart": 0.147,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.285,
+        "requestStart": 0.317,
+        "responseStart": 5.459,
+        "responseEnd": 5.601
+      },
+      "server_timing": "app;dur=3.5"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692499856.2861,
+        "domainLookupStart": 0.061,
+        "domainLookupEnd": 0.068,
+        "connectStart": 0.068,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.268,
+        "requestStart": 0.312,
+        "responseStart": 6.252,
+        "responseEnd": 6.63
+      },
+      "server_timing": "app;dur=4.2"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692499863.362,
+        "domainLookupStart": 0.052,
+        "domainLookupEnd": 0.057,
+        "connectStart": 0.057,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.184,
+        "requestStart": 0.213,
+        "responseStart": 3.388,
+        "responseEnd": 3.688
+      },
+      "server_timing": "app;dur=1.7"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692500022.419,
+        "domainLookupStart": 0.075,
+        "domainLookupEnd": 0.08,
+        "connectStart": 0.08,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.258,
+        "requestStart": 0.289,
+        "responseStart": 3.145,
+        "responseEnd": 3.824
+      },
+      "server_timing": "app;dur=1.4"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 203,
+      "timing": {
+        "startTime": 1793692500334.389,
+        "domainLookupStart": 0.174,
+        "domainLookupEnd": 0.192,
+        "connectStart": 0.192,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.525,
+        "requestStart": 0.568,
+        "responseStart": 4.893,
+        "responseEnd": 5.57
+      },
+      "server_timing": "app;dur=2.3"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 33008,
+      "timing": {
+        "startTime": 1793692500639.6858,
+        "domainLookupStart": 0.065,
+        "domainLookupEnd": 0.223,
+        "connectStart": 0.223,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.402,
+        "requestStart": 0.45,
+        "responseStart": 6.917,
+        "responseEnd": 7.324
+      },
+      "server_timing": "app;dur=4.9"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000004/facts",
+      "status": 200,
+      "bytes": 712,
+      "timing": {
+        "startTime": 1793692500647.461,
+        "domainLookupStart": 0.056,
+        "domainLookupEnd": 0.061,
+        "connectStart": 0.061,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.181,
+        "requestStart": 0.211,
+        "responseStart": 4.042,
+        "responseEnd": 4.366
+      },
+      "server_timing": "app;dur=2.6"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692500853.322,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.025,
+        "responseStart": 6.344,
+        "responseEnd": 6.731
+      },
+      "server_timing": "app;dur=4.0"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692500853.387,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.023,
+        "responseStart": 6.664,
+        "responseEnd": 7.001
+      },
+      "server_timing": "app;dur=4.3"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692500853.2568,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.027,
+        "responseStart": 7.07,
+        "responseEnd": 7.352
+      },
+      "server_timing": "app;dur=5.0"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692500853.103,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.121,
+        "responseStart": 7.968,
+        "responseEnd": 8.158
+      },
+      "server_timing": "app;dur=5.7"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692500853.063,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.133,
+        "responseStart": 78.638,
+        "responseEnd": 78.906
+      },
+      "server_timing": "app;dur=76.5"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692500942.416,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.081,
+        "responseStart": 60.935,
+        "responseEnd": 61.214
+      },
+      "server_timing": "app;dur=58.9"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692501005.894,
+        "domainLookupStart": 0.19,
+        "domainLookupEnd": 0.191,
+        "connectStart": 0.191,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.27,
+        "requestStart": 0.28,
+        "responseStart": 4.542,
+        "responseEnd": 4.803
+      },
+      "server_timing": "app;dur=2.0"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692501005.9512,
+        "domainLookupStart": 0.025,
+        "domainLookupEnd": 0.029,
+        "connectStart": 0.029,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.153,
+        "requestStart": 0.18,
+        "responseStart": 5.041,
+        "responseEnd": 5.226
+      },
+      "server_timing": "app;dur=3.9"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692501337.6792,
+        "domainLookupStart": 0.075,
+        "domainLookupEnd": 0.083,
+        "connectStart": 0.083,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.383,
+        "requestStart": 0.451,
+        "responseStart": 9.207,
+        "responseEnd": 9.703
+      },
+      "server_timing": "app;dur=6.6"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692501348.011,
+        "domainLookupStart": 0.082,
+        "domainLookupEnd": 0.089,
+        "connectStart": 0.089,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.265,
+        "requestStart": 0.305,
+        "responseStart": 6.31,
+        "responseEnd": 6.69
+      },
+      "server_timing": "app;dur=4.1"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692501488.534,
+        "domainLookupStart": 0.097,
+        "domainLookupEnd": 0.105,
+        "connectStart": 0.105,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.309,
+        "requestStart": 0.352,
+        "responseStart": 3.801,
+        "responseEnd": 4.223
+      },
+      "server_timing": "app;dur=1.7"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 188,
+      "timing": {
+        "startTime": 1793692501800.0432,
+        "domainLookupStart": 0.066,
+        "domainLookupEnd": 0.199,
+        "connectStart": 0.199,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.392,
+        "requestStart": 0.431,
+        "responseStart": 3.264,
+        "responseEnd": 3.679
+      },
+      "server_timing": "app;dur=1.6"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 30334,
+      "timing": {
+        "startTime": 1793692502107.0728,
+        "domainLookupStart": 0.069,
+        "domainLookupEnd": 0.076,
+        "connectStart": 0.076,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.312,
+        "requestStart": 0.358,
+        "responseStart": 11.546,
+        "responseEnd": 11.97
+      },
+      "server_timing": "app;dur=9.5"
+    },
+    {
+      "round": 0,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A001084/facts",
+      "status": 200,
+      "bytes": 1968,
+      "timing": {
+        "startTime": 1793692502119.591,
+        "domainLookupStart": 0.064,
+        "domainLookupEnd": 0.07,
+        "connectStart": 0.07,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.219,
+        "requestStart": 0.26,
+        "responseStart": 3.538,
+        "responseEnd": 3.877
+      },
+      "server_timing": "app;dur=1.9"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692502339.193,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.024,
+        "responseStart": 6.369,
+        "responseEnd": 6.778
+      },
+      "server_timing": "app;dur=4.0"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692502339.0598,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.037,
+        "responseStart": 6.703,
+        "responseEnd": 6.984
+      },
+      "server_timing": "app;dur=4.5"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692502339.129,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.024,
+        "responseStart": 6.959,
+        "responseEnd": 7.261
+      },
+      "server_timing": "app;dur=5.2"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692502338.918,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.106,
+        "responseStart": 7.848,
+        "responseEnd": 8.028
+      },
+      "server_timing": "app;dur=5.8"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692502338.881,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.123,
+        "responseStart": 69.044,
+        "responseEnd": 69.319
+      },
+      "server_timing": "app;dur=67.1"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692502425.341,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.122,
+        "responseStart": 54.989,
+        "responseEnd": 55.261
+      },
+      "server_timing": "app;dur=53.2"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692502483.019,
+        "domainLookupStart": 0.526,
+        "domainLookupEnd": 0.528,
+        "connectStart": 0.528,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.716,
+        "requestStart": 0.728,
+        "responseStart": 6.361,
+        "responseEnd": 6.778
+      },
+      "server_timing": "app;dur=3.8"
+    },
+    {
+      "round": 1,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692502483.249,
+        "domainLookupStart": 0.081,
+        "domainLookupEnd": 0.088,
+        "connectStart": 0.088,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.338,
+        "requestStart": 0.452,
+        "responseStart": 6.457,
+        "responseEnd": 6.92
+      },
+      "server_timing": "app;dur=4.5"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692502637.553,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.027,
+        "responseStart": 6.444,
+        "responseEnd": 6.883
+      },
+      "server_timing": "app;dur=4.1"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692502637.626,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.023,
+        "responseStart": 7.459,
+        "responseEnd": 7.81
+      },
+      "server_timing": "app;dur=4.5"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692502637.4998,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.029,
+        "responseStart": 8.048,
+        "responseEnd": 8.32
+      },
+      "server_timing": "app;dur=6.1"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692502637.352,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.103,
+        "responseStart": 9.604,
+        "responseEnd": 9.793
+      },
+      "server_timing": "app;dur=7.4"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692502637.311,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.124,
+        "responseStart": 68.02,
+        "responseEnd": 68.282
+      },
+      "server_timing": "app;dur=66.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692502723.429,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.09,
+        "responseStart": 56.76,
+        "responseEnd": 57.089
+      },
+      "server_timing": "app;dur=55.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692502782.242,
+        "domainLookupStart": 0.197,
+        "domainLookupEnd": 0.198,
+        "connectStart": 0.198,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.264,
+        "requestStart": 0.321,
+        "responseStart": 6.619,
+        "responseEnd": 6.877
+      },
+      "server_timing": "app;dur=3.8"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692502782.301,
+        "domainLookupStart": 0.026,
+        "domainLookupEnd": 0.032,
+        "connectStart": 0.032,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.194,
+        "requestStart": 0.226,
+        "responseStart": 7.232,
+        "responseEnd": 7.428
+      },
+      "server_timing": "app;dur=5.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692503103.776,
+        "domainLookupStart": 0.063,
+        "domainLookupEnd": 0.23,
+        "connectStart": 0.23,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.412,
+        "requestStart": 0.457,
+        "responseStart": 6.365,
+        "responseEnd": 6.787
+      },
+      "server_timing": "app;dur=4.4"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692503110.966,
+        "domainLookupStart": 0.064,
+        "domainLookupEnd": 0.069,
+        "connectStart": 0.069,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.183,
+        "requestStart": 0.209,
+        "responseStart": 2.626,
+        "responseEnd": 2.91
+      },
+      "server_timing": "app;dur=1.4"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692503254.502,
+        "domainLookupStart": 0.08,
+        "domainLookupEnd": 0.085,
+        "connectStart": 0.085,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.25,
+        "requestStart": 0.288,
+        "responseStart": 3.192,
+        "responseEnd": 3.546
+      },
+      "server_timing": "app;dur=1.6"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 203,
+      "timing": {
+        "startTime": 1793692503564.77,
+        "domainLookupStart": 0.084,
+        "domainLookupEnd": 0.09,
+        "connectStart": 0.09,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.284,
+        "requestStart": 0.322,
+        "responseStart": 3.977,
+        "responseEnd": 4.373
+      },
+      "server_timing": "app;dur=2.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 33008,
+      "timing": {
+        "startTime": 1793692503858.5867,
+        "domainLookupStart": 0.117,
+        "domainLookupEnd": 0.128,
+        "connectStart": 0.128,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.496,
+        "requestStart": 0.584,
+        "responseStart": 10.035,
+        "responseEnd": 10.685
+      },
+      "server_timing": "app;dur=6.8"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000004/facts",
+      "status": 200,
+      "bytes": 712,
+      "timing": {
+        "startTime": 1793692503869.634,
+        "domainLookupStart": 0.088,
+        "domainLookupEnd": 0.096,
+        "connectStart": 0.096,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.262,
+        "requestStart": 0.305,
+        "responseStart": 3.953,
+        "responseEnd": 4.335
+      },
+      "server_timing": "app;dur=1.9"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692504062.834,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.025,
+        "responseStart": 7.06,
+        "responseEnd": 7.605
+      },
+      "server_timing": "app;dur=4.3"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692504062.684,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.033,
+        "responseStart": 7.907,
+        "responseEnd": 8.318
+      },
+      "server_timing": "app;dur=5.3"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692504062.764,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.027,
+        "responseStart": 8.555,
+        "responseEnd": 8.981
+      },
+      "server_timing": "app;dur=6.5"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692504062.508,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.137,
+        "responseStart": 9.246,
+        "responseEnd": 9.519
+      },
+      "server_timing": "app;dur=7.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692504062.451,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.176,
+        "responseStart": 69.157,
+        "responseEnd": 69.458
+      },
+      "server_timing": "app;dur=67.0"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692504145.764,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.085,
+        "responseStart": 56.61,
+        "responseEnd": 56.87
+      },
+      "server_timing": "app;dur=54.7"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692504207.075,
+        "domainLookupStart": 0.285,
+        "domainLookupEnd": 0.286,
+        "connectStart": 0.286,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.376,
+        "requestStart": 0.386,
+        "responseStart": 4.84,
+        "responseEnd": 5.103
+      },
+      "server_timing": "app;dur=2.9"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692504207.136,
+        "domainLookupStart": 0.029,
+        "domainLookupEnd": 0.141,
+        "connectStart": 0.141,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.251,
+        "requestStart": 0.28,
+        "responseStart": 5.038,
+        "responseEnd": 5.209
+      },
+      "server_timing": "app;dur=3.6"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692504537.8252,
+        "domainLookupStart": 0.082,
+        "domainLookupEnd": 0.09,
+        "connectStart": 0.09,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.308,
+        "requestStart": 0.372,
+        "responseStart": 6.94,
+        "responseEnd": 7.417
+      },
+      "server_timing": "app;dur=5.1"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692504545.709,
+        "domainLookupStart": 0.076,
+        "domainLookupEnd": 0.082,
+        "connectStart": 0.082,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.251,
+        "requestStart": 0.286,
+        "responseStart": 3.288,
+        "responseEnd": 3.705
+      },
+      "server_timing": "app;dur=1.6"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692504671.3308,
+        "domainLookupStart": 0.079,
+        "domainLookupEnd": 0.085,
+        "connectStart": 0.085,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.268,
+        "requestStart": 0.301,
+        "responseStart": 3.436,
+        "responseEnd": 3.802
+      },
+      "server_timing": "app;dur=1.8"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 188,
+      "timing": {
+        "startTime": 1793692504983.389,
+        "domainLookupStart": 0.192,
+        "domainLookupEnd": 0.205,
+        "connectStart": 0.205,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.552,
+        "requestStart": 0.598,
+        "responseStart": 3.783,
+        "responseEnd": 4.302
+      },
+      "server_timing": "app;dur=1.8"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 30334,
+      "timing": {
+        "startTime": 1793692505289.501,
+        "domainLookupStart": 0.122,
+        "domainLookupEnd": 0.448,
+        "connectStart": 0.448,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.765,
+        "requestStart": 0.861,
+        "responseStart": 13.255,
+        "responseEnd": 13.872
+      },
+      "server_timing": "app;dur=10.3"
+    },
+    {
+      "round": 1,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A001084/facts",
+      "status": 200,
+      "bytes": 1968,
+      "timing": {
+        "startTime": 1793692505303.733,
+        "domainLookupStart": 0.089,
+        "domainLookupEnd": 0.096,
+        "connectStart": 0.096,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.3,
+        "requestStart": 0.341,
+        "responseStart": 3.979,
+        "responseEnd": 4.371
+      },
+      "server_timing": "app;dur=2.0"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692505507.365,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.028,
+        "responseStart": 6.167,
+        "responseEnd": 6.511
+      },
+      "server_timing": "app;dur=3.6"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692505507.502,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.026,
+        "responseStart": 6.501,
+        "responseEnd": 6.822
+      },
+      "server_timing": "app;dur=3.9"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692505507.431,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.025,
+        "responseStart": 7.297,
+        "responseEnd": 7.621
+      },
+      "server_timing": "app;dur=4.7"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692505507.2332,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.097,
+        "responseStart": 8.176,
+        "responseEnd": 8.416
+      },
+      "server_timing": "app;dur=6.1"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692505507.1938,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.115,
+        "responseStart": 71.503,
+        "responseEnd": 71.767
+      },
+      "server_timing": "app;dur=69.4"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692505593.696,
+        "domainLookupStart": 0.07,
+        "domainLookupEnd": 0.076,
+        "connectStart": 0.076,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.248,
+        "requestStart": 0.288,
+        "responseStart": 59.65,
+        "responseEnd": 60.004
+      },
+      "server_timing": "app;dur=57.7"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692505654.9321,
+        "domainLookupStart": 0.23,
+        "domainLookupEnd": 0.232,
+        "connectStart": 0.232,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.296,
+        "requestStart": 0.363,
+        "responseStart": 6.761,
+        "responseEnd": 7.056
+      },
+      "server_timing": "app;dur=4.4"
+    },
+    {
+      "round": 2,
+      "scenario": "person_ordinary",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692505655.0068,
+        "domainLookupStart": 0.032,
+        "domainLookupEnd": 0.038,
+        "connectStart": 0.038,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.209,
+        "requestStart": 0.249,
+        "responseStart": 7.218,
+        "responseEnd": 7.463
+      },
+      "server_timing": "app;dur=5.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692505813.28,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.024,
+        "responseStart": 9.042,
+        "responseEnd": 9.589
+      },
+      "server_timing": "app;dur=4.3"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692505813.152,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.027,
+        "responseStart": 9.908,
+        "responseEnd": 10.241
+      },
+      "server_timing": "app;dur=6.0"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692505813.216,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.024,
+        "responseStart": 10.921,
+        "responseEnd": 11.372
+      },
+      "server_timing": "app;dur=7.2"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692505812.989,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.119,
+        "responseStart": 14.165,
+        "responseEnd": 14.586
+      },
+      "server_timing": "app;dur=10.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692505812.9429,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.146,
+        "responseStart": 76.044,
+        "responseEnd": 76.346
+      },
+      "server_timing": "app;dur=73.0"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692505899.7131,
+        "domainLookupStart": 0.057,
+        "domainLookupEnd": 0.063,
+        "connectStart": 0.063,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.239,
+        "requestStart": 0.28,
+        "responseStart": 64.636,
+        "responseEnd": 65.031
+      },
+      "server_timing": "app;dur=62.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692505966.622,
+        "domainLookupStart": 0.342,
+        "domainLookupEnd": 0.347,
+        "connectStart": 0.347,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.535,
+        "requestStart": 0.561,
+        "responseStart": 8.364,
+        "responseEnd": 8.822
+      },
+      "server_timing": "app;dur=5.3"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692505966.689,
+        "domainLookupStart": 0.056,
+        "domainLookupEnd": 0.061,
+        "connectStart": 0.061,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.346,
+        "requestStart": 0.403,
+        "responseStart": 9.323,
+        "responseEnd": 9.638
+      },
+      "server_timing": "app;dur=6.7"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692506304.831,
+        "domainLookupStart": 0.093,
+        "domainLookupEnd": 0.365,
+        "connectStart": 0.365,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.627,
+        "requestStart": 0.708,
+        "responseStart": 7.952,
+        "responseEnd": 8.543
+      },
+      "server_timing": "app;dur=5.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692506313.7798,
+        "domainLookupStart": 0.087,
+        "domainLookupEnd": 0.094,
+        "connectStart": 0.094,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.277,
+        "requestStart": 0.318,
+        "responseStart": 4.73,
+        "responseEnd": 5.233
+      },
+      "server_timing": "app;dur=2.7"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692506453.7979,
+        "domainLookupStart": 0.08,
+        "domainLookupEnd": 0.086,
+        "connectStart": 0.086,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.251,
+        "requestStart": 0.294,
+        "responseStart": 4.101,
+        "responseEnd": 4.482
+      },
+      "server_timing": "app;dur=1.9"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 203,
+      "timing": {
+        "startTime": 1793692506764.1902,
+        "domainLookupStart": 0.107,
+        "domainLookupEnd": 0.113,
+        "connectStart": 0.113,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.322,
+        "requestStart": 0.38,
+        "responseStart": 5.508,
+        "responseEnd": 6.059
+      },
+      "server_timing": "app;dur=2.7"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 33008,
+      "timing": {
+        "startTime": 1793692507059.0098,
+        "domainLookupStart": 0.078,
+        "domainLookupEnd": 0.086,
+        "connectStart": 0.086,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.339,
+        "requestStart": 0.399,
+        "responseStart": 8.952,
+        "responseEnd": 9.581
+      },
+      "server_timing": "app;dur=6.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构热门集团",
+      "url": "/api/v1/persons/p%3A000004/facts",
+      "status": 200,
+      "bytes": 712,
+      "timing": {
+        "startTime": 1793692507069.188,
+        "domainLookupStart": 0.077,
+        "domainLookupEnd": 0.085,
+        "connectStart": 0.085,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.278,
+        "requestStart": 0.318,
+        "responseStart": 4.854,
+        "responseEnd": 5.24
+      },
+      "server_timing": "app;dur=2.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 1530,
+      "timing": {
+        "startTime": 1793692507263.691,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.032,
+        "responseStart": 7.112,
+        "responseEnd": 7.582
+      },
+      "server_timing": "app;dur=3.9"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692507263.515,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.031,
+        "responseStart": 7.619,
+        "responseEnd": 7.918
+      },
+      "server_timing": "app;dur=5.1"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 3791,
+      "timing": {
+        "startTime": 1793692507263.582,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.052,
+        "responseStart": 8.044,
+        "responseEnd": 8.365
+      },
+      "server_timing": "app;dur=6.1"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/suggest",
+      "status": 200,
+      "bytes": 7909,
+      "timing": {
+        "startTime": 1793692507263.3618,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.112,
+        "responseStart": 9.158,
+        "responseEnd": 9.351
+      },
+      "server_timing": "app;dur=7.0"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/meta",
+      "status": 200,
+      "bytes": 207,
+      "timing": {
+        "startTime": 1793692507263.3203,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.127,
+        "responseStart": 66.508,
+        "responseEnd": 66.774
+      },
+      "server_timing": "app;dur=64.5"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/relations/search",
+      "status": 200,
+      "bytes": 2059,
+      "timing": {
+        "startTime": 1793692507344.893,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.114,
+        "responseStart": 56.624,
+        "responseEnd": 56.909
+      },
+      "server_timing": "app;dur=54.6"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000002/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692507404.608,
+        "domainLookupStart": 0.315,
+        "domainLookupEnd": 0.317,
+        "connectStart": 0.317,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.385,
+        "requestStart": 0.448,
+        "responseStart": 5.061,
+        "responseEnd": 5.344
+      },
+      "server_timing": "app;dur=3.1"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/relations/evidence/search",
+      "status": 200,
+      "bytes": 1672,
+      "timing": {
+        "startTime": 1793692507404.6772,
+        "domainLookupStart": 0.029,
+        "domainLookupEnd": 0.152,
+        "connectStart": 0.152,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.301,
+        "requestStart": 0.337,
+        "responseStart": 5.42,
+        "responseEnd": 5.621
+      },
+      "server_timing": "app;dur=3.8"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 29157,
+      "timing": {
+        "startTime": 1793692507738.368,
+        "domainLookupStart": 0.064,
+        "domainLookupEnd": 0.07,
+        "connectStart": 0.07,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.267,
+        "requestStart": 0.311,
+        "responseStart": 6.395,
+        "responseEnd": 6.808
+      },
+      "server_timing": "app;dur=4.7"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A000001/facts",
+      "status": 200,
+      "bytes": 691,
+      "timing": {
+        "startTime": 1793692507745.66,
+        "domainLookupStart": 0.083,
+        "domainLookupEnd": 0.089,
+        "connectStart": 0.089,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.258,
+        "requestStart": 0.293,
+        "responseStart": 3.213,
+        "responseEnd": 3.572
+      },
+      "server_timing": "app;dur=1.4"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 4941,
+      "timing": {
+        "startTime": 1793692507887.9368,
+        "domainLookupStart": 0.095,
+        "domainLookupEnd": 0.103,
+        "connectStart": 0.103,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.297,
+        "requestStart": 0.342,
+        "responseStart": 3.446,
+        "responseEnd": 3.861
+      },
+      "server_timing": "app;dur=1.6"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/entities/suggest",
+      "status": 200,
+      "bytes": 188,
+      "timing": {
+        "startTime": 1793692508198.8289,
+        "domainLookupStart": 0.146,
+        "domainLookupEnd": 0.156,
+        "connectStart": 0.156,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.472,
+        "requestStart": 0.544,
+        "responseStart": 5.199,
+        "responseEnd": 5.769
+      },
+      "server_timing": "app;dur=2.2"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/search",
+      "status": 200,
+      "bytes": 30334,
+      "timing": {
+        "startTime": 1793692508504.627,
+        "domainLookupStart": 0.073,
+        "domainLookupEnd": 0.26,
+        "connectStart": 0.26,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.439,
+        "requestStart": 0.493,
+        "responseStart": 11.485,
+        "responseEnd": 11.965
+      },
+      "server_timing": "app;dur=9.2"
+    },
+    {
+      "round": 2,
+      "scenario": "虚构公司0999",
+      "url": "/api/v1/persons/p%3A001084/facts",
+      "status": 200,
+      "bytes": 1968,
+      "timing": {
+        "startTime": 1793692508517.132,
+        "domainLookupStart": 0.084,
+        "domainLookupEnd": 0.091,
+        "connectStart": 0.091,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.386,
+        "requestStart": 0.456,
+        "responseStart": 4.639,
+        "responseEnd": 5.059
+      },
+      "server_timing": "app;dur=2.2"
+    }
+  ],
+  "page_errors": [],
+  "data_version": "scale-v1-100000-42",
+  "database_unchanged": true,
+  "default_database_unchanged": true
+}

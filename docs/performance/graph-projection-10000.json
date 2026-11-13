@@ -1,0 +1,22 @@
+{
+  "format_version": 1,
+  "block_size": 128,
+  "status": "ready",
+  "space": "relationship_lab_projection_8b0b6fbd9364",
+  "projection_id": "relationship_lab_projection_8b0b6fbd9364",
+  "data_version": "scale-v1-10000-42",
+  "reference_month": 202611,
+  "source_digest": "fcfcfd11fb13d9e9bc640a8d0a6ac0cce9fca5e1d7251f77bc80936d46b80591",
+  "counts": {
+    "people": 10000,
+    "facts": 53521,
+    "sources": 10271,
+    "entities": 1125,
+    "blocks": 1192,
+    "memberships": 46545,
+    "experience_edges": 53521,
+    "auxiliary_edges": 93090,
+    "write_statements": 3723
+  },
+  "elapsed_ms": 37976.69
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "source_table": "graph_company",
+    "source_uuid": "001053c1-1237-5dc6-84a3-fd8c82301f79",
+    "entity_id": 301
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "150d51f0-3077-5ffe-88ff-82c9ee1c987e",
+    "entity_id": 302
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "5f4e10b7-2186-5a37-a719-046ff5cd0a5a",
+    "entity_id": 303
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "677c344d-efba-53c1-887a-93581df82985",
+    "entity_id": 304
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "d9533771-1665-5172-a20f-8cd3b59553da",
+    "entity_id": 305
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "ee0b49d7-93ff-5a05-a7ad-fc4b6297390e",
+    "entity_id": 306
+  },
+  {
+    "source_table": "graph_company",
+    "source_uuid": "f4e13bf5-f8ed-57d8-8a7d-d20c850cb445",
+    "entity_id": 307
+  },
+  {
+    "source_table": "graph_school",
+    "source_uuid": "119c4d16-3ada-541e-a715-8ca29643e078",
+    "entity_id": 308
+  },
+  {
+    "source_table": "graph_school",
+    "source_uuid": "5cdf7a0c-79aa-5db7-ac67-5c2295ce260b",
+    "entity_id": 309
+  },
+  {
+    "source_table": "graph_school",
+    "source_uuid": "79d7d9be-5d4a-5be2-9b5f-be40392ed5ee",
+    "entity_id": 310
+  },
+  {
+    "source_table": "graph_school",
+    "source_uuid": "924ea71e-fc84-5f35-aeeb-58194f9c9690",
+    "entity_id": 311
+  },
+  {
+    "source_table": "graph_school",
+    "source_uuid": "a361aff6-a7d2-5fa7-967b-9b3f7b6e169e",
+    "entity_id": 312
+  },
+  {
+    "source_table": "graph_major",
+    "source_uuid": "0c56aa17-e642-5a07-a9ac-395ade566035",
+    "entity_id": 313
+  },
+  {
+    "source_table": "graph_major",
+    "source_uuid": "6e2e7b24-4d2d-5904-9f24-697948363386",
+    "entity_id": 314
+  },
+  {
+    "source_table": "graph_major",
+    "source_uuid": "b2d402aa-4eea-574e-8049-c545d7a7cd6e",
+    "entity_id": 315
+  }
+]

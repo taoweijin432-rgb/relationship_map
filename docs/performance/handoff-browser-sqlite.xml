@@ -1,0 +1,10 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="7.388421">
+<testsuite name="source-trial.spec.ts" timestamp="2026-11-05T10:58:54.580Z" hostname="" tests="3" failures="0" skipped="0" time="5.232" errors="0">
+<testcase name="采样实体的两个入口、同条经历约束、图与模拟证据" classname="source-trial.spec.ts" time="2.402">
+</testcase>
+<testcase name="专题默认实体不能绑定旧演示ID" classname="source-trial.spec.ts" time="1.039">
+</testcase>
+<testcase name="对比时间轴与间接路径逐段证据" classname="source-trial.spec.ts" time="1.791">
+</testcase>
+</testsuite>
+</testsuites>

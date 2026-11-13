@@ -1,0 +1,265 @@
+{
+  "version": "mock-file-mapping-authoritative-v1",
+  "tables": {
+    "person_expert": {
+      "physical": "mock.experts",
+      "columns": {
+        "id": "id",
+        "name": "name",
+        "serial_number": "serial_number",
+        "deleted_at": "deleted_at"
+      },
+      "integer_fields": [
+        "id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    },
+    "work_expert": {
+      "physical": "mock.experts_work_experience",
+      "columns": {
+        "id": "id",
+        "person_id": "expert_id",
+        "start_date": "start_date",
+        "end_date": "end_date",
+        "deleted_at": "deleted_at",
+        "is_employed": "is_employed",
+        "position_title": "position_title"
+      },
+      "integer_fields": [
+        "id",
+        "person_id",
+        "is_employed"
+      ],
+      "datetime_fields": [
+        "start_date",
+        "end_date",
+        "deleted_at"
+      ]
+    },
+    "education_expert": {
+      "physical": "mock.experts_education_experience",
+      "columns": {
+        "id": "id",
+        "person_id": "expert_id",
+        "start_date": "start_date",
+        "end_date": "end_date",
+        "deleted_at": "deleted_at",
+        "education_level": "education_level",
+        "is_regular_enrollment": "is_regular_enrollment"
+      },
+      "integer_fields": [
+        "id",
+        "person_id"
+      ],
+      "datetime_fields": [
+        "start_date",
+        "end_date",
+        "deleted_at"
+      ]
+    },
+    "person_resume": {
+      "physical": "mock.resume",
+      "columns": {
+        "id": "id",
+        "name": "name",
+        "serial_number": "serial_number",
+        "deleted_at": "deleted_at"
+      },
+      "integer_fields": [
+        "id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    },
+    "work_resume": {
+      "physical": "mock.resume_work_experience",
+      "columns": {
+        "id": "id",
+        "person_id": "resume_id",
+        "start_date": "start_date",
+        "end_date": "end_date",
+        "deleted_at": "deleted_at",
+        "is_employed": "is_employed",
+        "position_title": "position_title"
+      },
+      "integer_fields": [
+        "id",
+        "person_id",
+        "is_employed"
+      ],
+      "datetime_fields": [
+        "start_date",
+        "end_date",
+        "deleted_at"
+      ]
+    },
+    "education_resume": {
+      "physical": "mock.resume_education_experience",
+      "columns": {
+        "id": "id",
+        "person_id": "resume_id",
+        "start_date": "start_date",
+        "end_date": "end_date",
+        "deleted_at": "deleted_at",
+        "education_level": "education_level",
+        "is_regular_enrollment": "is_regular_enrollment"
+      },
+      "integer_fields": [
+        "id",
+        "person_id"
+      ],
+      "datetime_fields": [
+        "start_date",
+        "end_date",
+        "deleted_at"
+      ]
+    },
+    "company": {
+      "physical": "mock.graph_company_entity",
+      "columns": {
+        "id": "id",
+        "name": "standard_name",
+        "code": "company_code",
+        "verification_status": "verification_status",
+        "deleted_at": "deleted_at",
+        "uuid": "uuid"
+      },
+      "integer_fields": [
+        "id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    },
+    "school": {
+      "physical": "mock.graph_school_entity",
+      "columns": {
+        "id": "id",
+        "name": "standard_name",
+        "code": "school_code",
+        "verification_status": "verification_status",
+        "deleted_at": "deleted_at",
+        "uuid": "uuid"
+      },
+      "integer_fields": [
+        "id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    },
+    "major": {
+      "physical": "mock.graph_major_entity",
+      "columns": {
+        "id": "id",
+        "name": "standard_name",
+        "code": "major_code",
+        "verification_status": "verification_status",
+        "deleted_at": "deleted_at",
+        "uuid": "uuid"
+      },
+      "integer_fields": [
+        "id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    },
+    "edge_mapping": {
+      "physical": "mock.graph_edge_mapping",
+      "columns": {
+        "id": "id",
+        "source_system": "source_system",
+        "source_table": "source_table",
+        "source_field_id": "source_field_id",
+        "source_field": "source_field",
+        "source_person_id": "source_person_id",
+        "standard_entity_id": "standard_entity_id",
+        "edge_type": "edge_type",
+        "deleted_at": "deleted_at"
+      },
+      "integer_fields": [
+        "id",
+        "source_field_id",
+        "source_person_id",
+        "standard_entity_id"
+      ],
+      "datetime_fields": [
+        "deleted_at"
+      ]
+    }
+  },
+  "people": {
+    "expert": "person_expert",
+    "resume": "person_resume"
+  },
+  "experiences": [
+    {
+      "table": "work_expert",
+      "source": "expert",
+      "person_table": "person_expert",
+      "source_table_value": "experts_work_experience",
+      "fields": {
+        "worked_at": "company_name"
+      }
+    },
+    {
+      "table": "education_expert",
+      "source": "expert",
+      "person_table": "person_expert",
+      "source_table_value": "experts_education_experience",
+      "fields": {
+        "studied_at": "school_name",
+        "studied_major": "major"
+      }
+    },
+    {
+      "table": "work_resume",
+      "source": "resume",
+      "person_table": "person_resume",
+      "source_table_value": "resume_work_experience",
+      "fields": {
+        "worked_at": "company_name"
+      }
+    },
+    {
+      "table": "education_resume",
+      "source": "resume",
+      "person_table": "person_resume",
+      "source_table_value": "resume_education_experience",
+      "fields": {
+        "studied_at": "school_name",
+        "studied_major": "major"
+      }
+    }
+  ],
+  "namespaces": {},
+  "entity_statuses": {
+    "company": [
+      "模拟有效"
+    ],
+    "school": [
+      "模拟有效"
+    ],
+    "major": [
+      "模拟有效"
+    ]
+  },
+  "matched_statuses": [],
+  "inactive_entity_statuses": {
+    "company": [
+      "模拟无效"
+    ],
+    "school": [
+      "模拟无效"
+    ],
+    "major": [
+      "模拟无效"
+    ]
+  },
+  "unmatched_statuses": [],
+  "adapter": "numeric-authoritative-v1"
+}

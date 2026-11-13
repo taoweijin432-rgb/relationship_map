@@ -1,0 +1,74 @@
+{
+  "data_mode": "mock",
+  "status": "verified",
+  "original": {
+    "data_mode": "mock",
+    "data_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+    "reference_month": 202611,
+    "person_count": 63,
+    "expert_count": 18,
+    "resume_count": 45,
+    "entity_count": 17,
+    "fact_count": 119,
+    "storage": "mysql-source-slots"
+  },
+  "corrected": {
+    "data_mode": "mock",
+    "data_version": "source-slots-v2-7a25c1d15e81c91cd61b-202611",
+    "reference_month": 202611,
+    "person_count": 63,
+    "expert_count": 18,
+    "resume_count": 45,
+    "entity_count": 17,
+    "fact_count": 118,
+    "storage": "mysql-source-slots"
+  },
+  "final_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+  "rollback_restored_original": true,
+  "stale_cursor_rejected_on_b": true,
+  "running_service_switch_rejected": true,
+  "mixed_candidate_rejected_without_pointer_change": true,
+  "history": {
+    "format_version": 1,
+    "revision": 3,
+    "active": {
+      "directory": "/Users/yuka/Developer/character_relationship_map/data/source-api-trial/run-v2",
+      "bundle_digest": "1dbb7a1bb03a29edbc8115ef95f84870561560b773882376a29a4b2191784993",
+      "data_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+      "projection_id": "source-api-def3e6ec6076bf4c3819-202611"
+    },
+    "previous": {
+      "directory": "/Users/yuka/Developer/character_relationship_map/data/source-release-trial/corrected-v1/api",
+      "bundle_digest": "2c70a4606427f6edf3496eb9b0119f224511af892304ac6349c586f9b4880c0b",
+      "data_version": "source-slots-v2-7a25c1d15e81c91cd61b-202611",
+      "projection_id": "source-api-7a25c1d15e81c91cd61b-202611"
+    },
+    "history": [
+      {
+        "revision": 1,
+        "action": "activate",
+        "previous_version": null,
+        "data_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+        "at": "2026-11-06T02:21:25.717637+00:00"
+      },
+      {
+        "revision": 2,
+        "action": "activate",
+        "previous_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+        "data_version": "source-slots-v2-7a25c1d15e81c91cd61b-202611",
+        "at": "2026-11-06T02:21:27.531034+00:00"
+      },
+      {
+        "revision": 3,
+        "action": "rollback",
+        "previous_version": "source-slots-v2-7a25c1d15e81c91cd61b-202611",
+        "data_version": "source-slots-v2-def3e6ec6076bf4c3819-202611",
+        "at": "2026-11-06T02:21:28.913117+00:00"
+      }
+    ]
+  },
+  "cloud_access": false,
+  "source_databases_modified": false,
+  "graph_spaces_modified": false,
+  "services_reclaimed": true
+}

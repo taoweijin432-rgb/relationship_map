@@ -1,0 +1,17 @@
+{
+  "note": "人工预期；org/school 槽位在测试中替换为采样实体ID。所有人物及经历是虚构的。",
+  "searches": [
+    {"name":"公司职位同条经历","filters":{"organization_ids":["org:0"],"role_ids":["role:0"]},"expected":["p:000001","p:000031"]},
+    {"name":"公司职位学校交集","filters":{"organization_ids":["org:0"],"role_ids":["role:0"],"school_ids":["school:0"]},"expected":["p:000001","p:000031"]},
+    {"name":"专家来源","filters":{"organization_ids":["org:0"],"role_ids":["role:0"],"source":"expert"},"expected":["p:000001"]},
+    {"name":"原经历拆分不拼职位","filters":{"organization_ids":["org:0"],"role_ids":["role:2"]},"expected":["p:000003","p:000007","p:000013","p:000043"]},
+    {"name":"空结果","filters":{"organization_ids":["org:0"],"role_ids":["role:0"],"school_ids":["school:4"]},"expected":[]}
+  ],
+  "evidence": [
+    {"name":"同期24月","left":"p:000001","right":"p:000002","type":"same_company_overlap","pairs":[["trial:f:000001:work","trial:f:000002:work",202101,202212,24]]},
+    {"name":"非同期","left":"p:000001","right":"p:000003","type":"same_company","pairs":[["trial:f:000001:work","trial:f:000003:work",null,null,null],["trial:f:000001:repeat","trial:f:000003:work",null,null,null]]},
+    {"name":"日期未知","left":"p:000001","right":"p:000004","type":"same_company","pairs":[["trial:f:000001:work","trial:f:000004:work",null,null,null],["trial:f:000001:repeat","trial:f:000004:work",null,null,null]]},
+    {"name":"跨年与单月","left":"p:000014","right":"p:000015","type":"same_company_overlap","pairs":[["trial:f:000014:work","trial:f:000015:work",202101,202101,1]]},
+    {"name":"当前任职基准月","left":"p:000001","right":"p:000005","type":"same_company_overlap","pairs":[["trial:f:000001:work","trial:f:000005:work",202211,202212,2],["trial:f:000001:repeat","trial:f:000005:work",202401,202611,35]]}
+  ]
+}

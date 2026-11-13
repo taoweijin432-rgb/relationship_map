@@ -1,0 +1,49 @@
+-- Schema: uuid-facts-v1. Select a NEW empty space before executing this file.
+-- Space VID type: FIXED_STRING(128). Do not apply to source-slots-v2 spaces.
+-- Application checks enforce VID formats, endpoint tags, enums and month ranges.
+
+CREATE TAG person (
+    name STRING NOT NULL,
+    source_system STRING NOT NULL
+) COMMENT = 'Person, source_system is expert or resume';
+
+CREATE TAG company (
+    name STRING NOT NULL
+) COMMENT = 'Standard company UUID, name is not unique';
+
+CREATE TAG school (
+    name STRING NOT NULL
+) COMMENT = 'Standard school UUID, name is not unique';
+
+CREATE TAG major (
+    name STRING NOT NULL
+) COMMENT = 'Standard major UUID, not a job title';
+
+-- Rank is graph_edge_mapping.id, not an edge property or an entity ID.
+-- Only effective, published facts enter this immutable snapshot.
+CREATE EDGE worked_at (
+    start_month INT32 NULL,
+    end_month INT32 NULL,
+    is_current BOOL NOT NULL
+) COMMENT = 'person -> company, one original work experience per rank';
+
+CREATE EDGE studied_at (
+    start_month INT32 NULL,
+    end_month INT32 NULL
+) COMMENT = 'person -> school, no inferred enrollment status';
+
+CREATE EDGE studied_major (
+    start_month INT32 NULL,
+    end_month INT32 NULL
+) COMMENT = 'person -> major, not a person-to-person relation';
+
+-- One control vertex: meta:projection. This is project metadata, not source DDL.
+CREATE TAG projection_meta (
+    schema_version STRING NOT NULL,
+    projection_id STRING NOT NULL,
+    snapshot_sha256 FIXED_STRING(64) NOT NULL,
+    reference_month INT32 NOT NULL,
+    state STRING NOT NULL
+) COMMENT = 'Immutable projection identity, staging or ready';
+
+-- No property indexes or TTL in this baseline. Queries start from known VIDs.

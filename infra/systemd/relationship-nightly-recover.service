@@ -1,0 +1,16 @@
+[Unit]
+Description=Recover interrupted relationship nightly release
+Wants=network-online.target
+After=network-online.target relationship-graph-tunnel.service nginx.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/srv/relationship-map
+ExecStart=/srv/relationship-map/backend/.venv/bin/python -m relationship_query.update.nightly recover --config /etc/relationship-map/nightly.json
+TimeoutStartSec=6min
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

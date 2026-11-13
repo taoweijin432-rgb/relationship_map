@@ -1,0 +1,418 @@
+{
+  "data_mode": "mock",
+  "data_version": "source-trial-v1-b337fac2eb44",
+  "environment": {
+    "python": "3.12.14",
+    "executable": "/Users/yuka/Developer/character_relationship_map/backend/.venv/bin/python",
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "logical_cpus": 10,
+    "sqlite": "3.53.1",
+    "backend_source_sha256": "3f50bbc2b9158ff3dcda9574b5323a65c3f0d7ce158ae261dcf5e3fc7fda36f4"
+  },
+  "method": "one sequential ASGI request per case/backend; real loopback MySQL TCP and graph RPC; not HTTP load or capacity test",
+  "source_digest": "dba4cf434fbf2ace45b5da4a67cb6bb9bc13a1efd5c1b36143e00465a6aa495f",
+  "cases": [
+    {
+      "mode": "sqlite",
+      "name": "entity_filter",
+      "elapsed_ms": 10.563,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 2227,
+      "semantic_sha256": "579eb181ddee3f335f3e3f1cccfd88f1105c59da172309e8abc19ebffa464a59",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "person_relations",
+      "elapsed_ms": 4.38,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 7833,
+      "semantic_sha256": "6e272be6163e20b06b00cedfd3e504daba82f8bdb041bfd3226d8e91db3127c2",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "compare",
+      "elapsed_ms": 1.926,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 7073,
+      "semantic_sha256": "517b3b48ced4025dbea3d2c1269efb5f61b5201ab344912b3b9d19e96ad66689",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "facts",
+      "elapsed_ms": 1.5,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 1735,
+      "semantic_sha256": "6513fc386e79dad2837455ff862819433d1275d65059b0e3ea0263c7f89724d7",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "evidence",
+      "elapsed_ms": 1.633,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 4629,
+      "semantic_sha256": "aa78b3371a3315ee8e153d4439540a4c93a32a7dbab9d70890151a9e81bc3ef6",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "topic",
+      "elapsed_ms": 1.183,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 237,
+      "semantic_sha256": "fec663c465b5c12e612481009dee9a04f8eb40a0a1af9dcb5125a8ecb1a12553",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "expand",
+      "elapsed_ms": 4.835,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 6717,
+      "semantic_sha256": "9cea1b75b7ad2200436ea2c1e9eccb4717900ecf65ee6e15027fd3ec0d7c8d3a",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "sqlite",
+      "name": "path_mixed",
+      "elapsed_ms": 5.722,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 24625,
+      "semantic_sha256": "1df9b732decd3c1e52624310c26bcb9b8f9642ec786735f681d26b1065cbc532",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 22,
+        "fact_rows_loaded": 49,
+        "evidence_pairs_examined": 226,
+        "elapsed_ms": 3.69,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "sqlite",
+      "name": "path_overlap",
+      "elapsed_ms": 4.819,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 5130,
+      "semantic_sha256": "d1e4f011814965d4c70db45a89dc4c4e0996ccb5416348826a415ddc4e9f4012",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 11,
+        "fact_rows_loaded": 28,
+        "evidence_pairs_examined": 121,
+        "elapsed_ms": 2.94,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "sqlite",
+      "name": "path_school",
+      "elapsed_ms": 3.921,
+      "startup_ms": 14.723,
+      "status": 200,
+      "response_bytes": 1129,
+      "semantic_sha256": "da4a38cee04d1fc2d4176d1431b7c0f8e67781ab5a72166e87562e77a3878bbd",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 14,
+        "fact_rows_loaded": 32,
+        "evidence_pairs_examined": 141,
+        "elapsed_ms": 2.16,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "mysql",
+      "name": "entity_filter",
+      "elapsed_ms": 12.558,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 2227,
+      "semantic_sha256": "579eb181ddee3f335f3e3f1cccfd88f1105c59da172309e8abc19ebffa464a59",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "person_relations",
+      "elapsed_ms": 10.237,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 7833,
+      "semantic_sha256": "6e272be6163e20b06b00cedfd3e504daba82f8bdb041bfd3226d8e91db3127c2",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "compare",
+      "elapsed_ms": 3.968,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 7073,
+      "semantic_sha256": "517b3b48ced4025dbea3d2c1269efb5f61b5201ab344912b3b9d19e96ad66689",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "facts",
+      "elapsed_ms": 2.768,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 1735,
+      "semantic_sha256": "6513fc386e79dad2837455ff862819433d1275d65059b0e3ea0263c7f89724d7",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "evidence",
+      "elapsed_ms": 4.2,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 4629,
+      "semantic_sha256": "aa78b3371a3315ee8e153d4439540a4c93a32a7dbab9d70890151a9e81bc3ef6",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "topic",
+      "elapsed_ms": 1.428,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 237,
+      "semantic_sha256": "fec663c465b5c12e612481009dee9a04f8eb40a0a1af9dcb5125a8ecb1a12553",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "expand",
+      "elapsed_ms": 12.02,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 6717,
+      "semantic_sha256": "9cea1b75b7ad2200436ea2c1e9eccb4717900ecf65ee6e15027fd3ec0d7c8d3a",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "mysql",
+      "name": "path_mixed",
+      "elapsed_ms": 9.903,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 24625,
+      "semantic_sha256": "1df9b732decd3c1e52624310c26bcb9b8f9642ec786735f681d26b1065cbc532",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 22,
+        "fact_rows_loaded": 49,
+        "evidence_pairs_examined": 226,
+        "elapsed_ms": 7.16,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "mysql",
+      "name": "path_overlap",
+      "elapsed_ms": 10.494,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 5129,
+      "semantic_sha256": "d1e4f011814965d4c70db45a89dc4c4e0996ccb5416348826a415ddc4e9f4012",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 11,
+        "fact_rows_loaded": 28,
+        "evidence_pairs_examined": 121,
+        "elapsed_ms": 7.1,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "mysql",
+      "name": "path_school",
+      "elapsed_ms": 9.716,
+      "startup_ms": 12.306,
+      "status": 200,
+      "response_bytes": 1129,
+      "semantic_sha256": "da4a38cee04d1fc2d4176d1431b7c0f8e67781ab5a72166e87562e77a3878bbd",
+      "query_backend": "sql",
+      "graph_stats": {
+        "candidates_examined": 14,
+        "fact_rows_loaded": 32,
+        "evidence_pairs_examined": 141,
+        "elapsed_ms": 6.33,
+        "graph_calls": 0,
+        "graph_rows": 0
+      }
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "entity_filter",
+      "elapsed_ms": 12.713,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 2227,
+      "semantic_sha256": "579eb181ddee3f335f3e3f1cccfd88f1105c59da172309e8abc19ebffa464a59",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "person_relations",
+      "elapsed_ms": 9.585,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 7833,
+      "semantic_sha256": "6e272be6163e20b06b00cedfd3e504daba82f8bdb041bfd3226d8e91db3127c2",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "compare",
+      "elapsed_ms": 4.664,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 7073,
+      "semantic_sha256": "517b3b48ced4025dbea3d2c1269efb5f61b5201ab344912b3b9d19e96ad66689",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "facts",
+      "elapsed_ms": 3.333,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 1735,
+      "semantic_sha256": "6513fc386e79dad2837455ff862819433d1275d65059b0e3ea0263c7f89724d7",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "evidence",
+      "elapsed_ms": 5.202,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 4629,
+      "semantic_sha256": "aa78b3371a3315ee8e153d4439540a4c93a32a7dbab9d70890151a9e81bc3ef6",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "topic",
+      "elapsed_ms": 2.867,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 237,
+      "semantic_sha256": "fec663c465b5c12e612481009dee9a04f8eb40a0a1af9dcb5125a8ecb1a12553",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "expand",
+      "elapsed_ms": 13.545,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 6717,
+      "semantic_sha256": "9cea1b75b7ad2200436ea2c1e9eccb4717900ecf65ee6e15027fd3ec0d7c8d3a",
+      "query_backend": null,
+      "graph_stats": null
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "path_mixed",
+      "elapsed_ms": 45.875,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 24672,
+      "semantic_sha256": "1df9b732decd3c1e52624310c26bcb9b8f9642ec786735f681d26b1065cbc532",
+      "query_backend": "nebula_sql",
+      "graph_stats": {
+        "candidates_examined": 22,
+        "fact_rows_loaded": 49,
+        "evidence_pairs_examined": 226,
+        "elapsed_ms": 41.41,
+        "graph_calls": 9,
+        "graph_rows": 38
+      }
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "path_overlap",
+      "elapsed_ms": 32.268,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 5177,
+      "semantic_sha256": "d1e4f011814965d4c70db45a89dc4c4e0996ccb5416348826a415ddc4e9f4012",
+      "query_backend": "nebula_sql",
+      "graph_stats": {
+        "candidates_examined": 11,
+        "fact_rows_loaded": 28,
+        "evidence_pairs_examined": 121,
+        "elapsed_ms": 27.36,
+        "graph_calls": 7,
+        "graph_rows": 21
+      }
+    },
+    {
+      "mode": "nebula_sql",
+      "name": "path_school",
+      "elapsed_ms": 27.189,
+      "startup_ms": 98.535,
+      "status": 200,
+      "response_bytes": 1176,
+      "semantic_sha256": "da4a38cee04d1fc2d4176d1431b7c0f8e67781ab5a72166e87562e77a3878bbd",
+      "query_backend": "nebula_sql",
+      "graph_stats": {
+        "candidates_examined": 14,
+        "fact_rows_loaded": 32,
+        "evidence_pairs_examined": 141,
+        "elapsed_ms": 22.55,
+        "graph_calls": 7,
+        "graph_rows": 22
+      }
+    }
+  ],
+  "semantic_equal": true,
+  "sql_unchanged": true,
+  "files_unchanged": true,
+  "file_sha256": {
+    "data/mock-v1.sqlite": "17f254bfa5e62481c3f195c130eca0d5ea38ccdf2abd9eae73171eb2729a863e",
+    "data/source-trial/run-v2/query.sqlite": "d39e7cf8c8573dc3007d3abc248412b9cfd6dae810779c6f165a13737e4a6b2d",
+    "docs/examples/source-trial-sample.json": "b337fac2eb44c8a63301c2072c24a51fbe7a239372b50097fffa19a45eb4b885"
+  }
+}

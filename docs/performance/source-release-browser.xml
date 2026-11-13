@@ -1,0 +1,10 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="10.083713">
+<testsuite name="source-release.spec.ts" timestamp="2026-11-06T02:25:44.865Z" hostname="" tests="3" failures="0" skipped="0" time="6.437" errors="0">
+<testcase name="修正批次的旧工作关系消失，同校使用纠正目标" classname="source-release.spec.ts" time="2.158">
+</testcase>
+<testcase name="公司纠正与更名保留原经历定位，旧别名仍可搜索" classname="source-release.spec.ts" time="1.731">
+</testcase>
+<testcase name="旧连接链消失，图内完整无结果有明确标记" classname="source-release.spec.ts" time="2.548">
+</testcase>
+</testsuite>
+</testsuites>

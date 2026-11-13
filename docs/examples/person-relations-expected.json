@@ -1,0 +1,32 @@
+{
+  "note": "人工列举，禁止用图查询输出覆盖。数组列由 columns 定义，快照B明确移除原工作事实7001。",
+  "columns": ["kind", "source", "target", "entity_vid", "left_fact_rank", "right_fact_rank", "overlap_start_month", "overlap_end_month"],
+  "before": [
+    ["same_company", "p:expert:101", "p:expert:104", "e:11111111-1111-4111-8111-111111111111", 7001, 7005, null, null],
+    ["same_company", "p:expert:101", "p:expert:104", "e:11111111-1111-4111-8111-111111111111", 7002, 7005, null, null],
+    ["same_company", "p:expert:101", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7001, 7003, null, null],
+    ["same_company", "p:expert:101", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7002, 7003, null, null],
+    ["same_company", "p:expert:101", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7001, 7004, null, null],
+    ["same_company", "p:expert:101", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7002, 7004, null, null],
+    ["same_company", "p:expert:104", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7005, 7003, null, null],
+    ["same_company", "p:expert:104", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7005, 7004, null, null],
+    ["same_company", "p:resume:102", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7003, 7004, null, null],
+    ["same_company", "p:expert:105", "p:resume:102", "e:22222222-2222-4222-8222-222222222222", 7006, 7007, null, null],
+    ["same_company", "p:expert:105", "p:resume:106", "e:22222222-2222-4222-8222-222222222222", 7006, 7008, null, null],
+    ["same_company", "p:resume:102", "p:resume:106", "e:22222222-2222-4222-8222-222222222222", 7007, 7008, null, null],
+    ["company_overlap", "p:expert:101", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7001, 7003, 202101, 202212],
+    ["same_school", "p:expert:101", "p:expert:105", "e:33333333-3333-4333-8333-333333333333", 8001, 8002, null, null]
+  ],
+  "after": [
+    ["same_company", "p:expert:101", "p:expert:104", "e:11111111-1111-4111-8111-111111111111", 7002, 7005, null, null],
+    ["same_company", "p:expert:101", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7002, 7003, null, null],
+    ["same_company", "p:expert:101", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7002, 7004, null, null],
+    ["same_company", "p:expert:104", "p:resume:102", "e:11111111-1111-4111-8111-111111111111", 7005, 7003, null, null],
+    ["same_company", "p:expert:104", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7005, 7004, null, null],
+    ["same_company", "p:resume:102", "p:resume:103", "e:11111111-1111-4111-8111-111111111111", 7003, 7004, null, null],
+    ["same_company", "p:expert:105", "p:resume:102", "e:22222222-2222-4222-8222-222222222222", 7006, 7007, null, null],
+    ["same_company", "p:expert:105", "p:resume:106", "e:22222222-2222-4222-8222-222222222222", 7006, 7008, null, null],
+    ["same_company", "p:resume:102", "p:resume:106", "e:22222222-2222-4222-8222-222222222222", 7007, 7008, null, null],
+    ["same_school", "p:expert:101", "p:expert:105", "e:33333333-3333-4333-8333-333333333333", 8001, 8002, null, null]
+  ]
+}

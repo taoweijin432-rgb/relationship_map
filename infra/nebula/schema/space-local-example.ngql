@@ -1,0 +1,8 @@
+-- Local single-storage example only. Choose a fresh space name for every snapshot.
+-- Execute CREATE SPACE, wait for visibility, USE the space, then run uuid-facts-v1.ngql.
+-- No IF NOT EXISTS: an existing name must fail rather than hide schema drift.
+CREATE SPACE relationship_lab_uuid_ddl_v1 (
+    partition_num = 1,
+    replica_factor = 1,
+    vid_type = FIXED_STRING(128)
+) COMMENT = 'Local uuid-facts-v1 example; not production sizing';

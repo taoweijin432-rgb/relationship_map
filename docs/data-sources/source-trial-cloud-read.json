@@ -1,0 +1,30 @@
+{
+  "audit_version": 1,
+  "scope": "Only cloud calls executed for this v0.12 sampling run; not a server-wide audit.",
+  "project_id": "mutixwehutavliwihnpi",
+  "captured_at": "2026-11-04T03:24:17.67628+00:00",
+  "calls": [
+    {
+      "tool": "supabase.execute_sql",
+      "operation": "SELECT",
+      "sql_file": "../examples/source-trial-sampling.sql",
+      "base_tables": [
+        "company_standard",
+        "school_standard",
+        "major_standard",
+        "name_mapping",
+        "company_relation"
+      ],
+      "views_called": [],
+      "stored_procedures_called": [],
+      "mapping_limit": 90,
+      "sql": "WITH\nrelation_sample AS (\n  SELECT id, parent_company_id, child_company_id, relation_type, verification_status,\n         valid_from, valid_to\n  FROM public.company_relation ORDER BY id LIMIT 3\n),\ncompany_keys AS (\n  SELECT id FROM (SELECT id FROM public.company_standard\n    WHERE verification_status = '已核验' ORDER BY id LIMIT 12) s\n  UNION SELECT parent_company_id FROM relation_sample\n  UNION SELECT child_company_id FROM relation_sample\n),\nschool_keys AS (\n  SELECT id FROM (SELECT id FROM public.school_standard\n    WHERE verification_status = '已核验' ORDER BY id LIMIT 6) s\n  UNION SELECT id FROM (SELECT id FROM public.school_standard\n    WHERE verification_status = '已合并' ORDER BY id LIMIT 1) s\n),\nmajor_keys AS (\n  SELECT id FROM (SELECT id FROM public.major_standard\n    WHERE verification_status = '已核验' ORDER BY id LIMIT 3) s\n  UNION SELECT id FROM (SELECT id FROM public.major_standard\n    WHERE verification_status = '已合并' ORDER BY id LIMIT 1) s\n),\nmapping_ids AS (\n  SELECT id FROM (SELECT id FROM public.name_mapping\n    WHERE company_id IN (SELECT id FROM company_keys)\n       OR school_id IN (SELECT id FROM school_keys)\n       OR major_id IN (SELECT id FROM major_keys)\n    ORDER BY entity_type, id LIMIT 80) s\n  UNION SELECT id FROM (SELECT id FROM public.name_mapping\n    WHERE entity_type = 'company' AND original_database_id IS NULL\n    ORDER BY id LIMIT 5) s\n  UNION SELECT id FROM (SELECT id FROM public.name_mapping\n    WHERE processing_status = '待确认' ORDER BY id LIMIT 5) s\n),\nmapping_sample AS (\n  SELECT id, batch_no, source_id, source_file, source_sheet, source_row,\n         original_database_id, entity_type, item_id, item_no, raw_name,\n         cleaned_name, company_id, school_id, major_id, processing_status,\n         attributes->>'source_namespace' AS source_namespace,\n         attributes->>'source_record_id' AS source_record_id\n  FROM public.name_mapping WHERE id IN (SELECT id FROM mapping_ids)\n),\nschool_selection AS (\n  SELECT id FROM school_keys\n  UNION SELECT school_id FROM mapping_sample WHERE school_id IS NOT NULL\n),\nmajor_selection AS (\n  SELECT id FROM major_keys\n  UNION SELECT major_id FROM mapping_sample WHERE major_id IS NOT NULL\n)\nSELECT jsonb_build_object(\n  'format_version', 1, 'captured_at', now(), 'project', 'company-resolution-test',\n  'company_standard', (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) FROM (\n    SELECT id, standard_name, short_name, former_names, verification_status\n    FROM public.company_standard WHERE id IN (SELECT id FROM company_keys)\n      OR id IN (SELECT company_id FROM mapping_sample WHERE company_id IS NOT NULL)\n  ) s),\n  'school_standard', (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) FROM (\n    SELECT id, standard_name, short_name, former_names, verification_status,\n           attributes->>'merged_into_id' AS merged_into_id\n    FROM public.school_standard WHERE id IN (SELECT id FROM school_selection)\n      OR id::text IN (SELECT attributes->>'merged_into_id'\n        FROM public.school_standard WHERE id IN (SELECT id FROM school_selection))\n  ) s),\n  'major_standard', (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) FROM (\n    SELECT id, standard_name, verification_status,\n           attributes->>'merged_into_id' AS merged_into_id\n    FROM public.major_standard WHERE id IN (SELECT id FROM major_selection)\n      OR id::text IN (SELECT attributes->>'merged_into_id'\n        FROM public.major_standard WHERE id IN (SELECT id FROM major_selection))\n  ) s),\n  'name_mapping', (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) FROM mapping_sample s),\n  'company_relation', (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) FROM relation_sample s)\n) AS sample;"
+    }
+  ],
+  "cloud_write_calls": 0,
+  "follow_up_cloud_calls": 0,
+  "all_subsequent_work": "offline files and loopback MySQL/NebulaGraph only",
+  "note": "No before/after source-table comparison: colleagues may continue processing independently.",
+  "executed_sql_sha256": "8a754d53324dfbb4200ca10652eb5cf583c3d6635c855dc920f37f5f3f957f7c",
+  "sample_sha256": "b337fac2eb44c8a63301c2072c24a51fbe7a239372b50097fffa19a45eb4b885"
+}

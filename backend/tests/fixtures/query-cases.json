@@ -1,0 +1,288 @@
+{
+  "description": "人工列举预期集合，不从实现或基准算法生成；与 docs/examples/logical-dataset.json 配套",
+  "searches": [
+    {
+      "name": "最短同期不累加重复或多次任职",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company_overlap", "min_overlap_months":25},
+      "expected": ["p:05"]
+    },
+    {
+      "name": "时间窗内计算最短交集",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company_overlap", "relation_start_month":202101, "relation_end_month":202112, "min_overlap_months":12},
+      "expected": ["p:02", "p:06", "p:08"]
+    },
+    {
+      "name": "跨年交集按单条经历对",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company_overlap", "relation_start_month":202112, "relation_end_month":202201, "min_overlap_months":2},
+      "expected": ["p:02"]
+    },
+    {
+      "name": "共同公司不能用候选另一段履历拼接",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company", "relation_organization_ids":["org:b"]},
+      "expected": []
+    },
+    {
+      "name": "共同公司过滤保留未知日期",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company", "relation_organization_ids":["org:a"]},
+      "expected": ["p:02", "p:03", "p:04", "p:05", "p:06", "p:08", "p:11", "p:12"]
+    },
+    {
+      "name": "单侧下界与当前任职",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company_overlap", "relation_start_month":202401, "min_overlap_months":2},
+      "expected": ["p:05"]
+    },
+    {
+      "name": "单侧上界包含单月",
+      "reference": "p:01",
+      "filters": {"relation_type":"same_company_overlap", "relation_end_month":202001},
+      "expected": ["p:06", "p:08"]
+    },
+    {
+      "name": "有效人物含无经历人物",
+      "filters": {},
+      "expected": [
+        "p:01",
+        "p:02",
+        "p:03",
+        "p:04",
+        "p:05",
+        "p:06",
+        "p:07",
+        "p:08",
+        "p:10",
+        "p:11",
+        "p:12",
+        "p:13",
+        "p:14"
+      ]
+    },
+    {
+      "name": "同条经历公司职位",
+      "filters": { "organization_id": "org:a", "role_id": "role:director" },
+      "expected": ["p:01", "p:08"]
+    },
+    {
+      "name": "另一公司总监",
+      "filters": { "organization_id": "org:b", "role_id": "role:director" },
+      "expected": ["p:06"]
+    },
+    {
+      "name": "重复经历不重复返回人物",
+      "filters": { "organization_id": "org:a" },
+      "expected": [
+        "p:01",
+        "p:02",
+        "p:03",
+        "p:04",
+        "p:05",
+        "p:06",
+        "p:08",
+        "p:11",
+        "p:12"
+      ]
+    },
+    {
+      "name": "公司学校交集",
+      "filters": { "organization_id": "org:b", "school_id": "school:x" },
+      "expected": ["p:13"]
+    },
+    {
+      "name": "双来源专家筛选",
+      "filters": { "source": "expert" },
+      "expected": ["p:01", "p:05", "p:08"]
+    },
+    {
+      "name": "学校",
+      "filters": { "school_id": "school:x" },
+      "expected": ["p:01", "p:02", "p:04", "p:05", "p:11", "p:13"]
+    },
+    {
+      "name": "无结果交集",
+      "filters": {
+        "organization_id": "org:a",
+        "role_id": "role:director",
+        "school_id": "school:z"
+      },
+      "expected": []
+    },
+    {
+      "name": "只有起始筛选月",
+      "filters": { "start_month": 202401 },
+      "expected": ["p:01", "p:05", "p:06", "p:11"]
+    },
+    {
+      "name": "只有结束筛选月",
+      "filters": { "end_month": 202001 },
+      "expected": ["p:01", "p:03", "p:06", "p:07", "p:08", "p:14"]
+    },
+    {
+      "name": "完整单月区间",
+      "filters": { "start_month": 202112, "end_month": 202112 },
+      "expected": ["p:01", "p:02", "p:06", "p:07", "p:08", "p:12"]
+    },
+    {
+      "name": "历史截止时间",
+      "filters": { "end_month": 201512 },
+      "expected": ["p:03"]
+    },
+    {
+      "name": "共同公司含未知时间",
+      "reference": "p:01",
+      "filters": { "relation_type": "same_company" },
+      "expected": [
+        "p:02",
+        "p:03",
+        "p:04",
+        "p:05",
+        "p:06",
+        "p:08",
+        "p:11",
+        "p:12"
+      ]
+    },
+    {
+      "name": "同期要求可靠月份",
+      "reference": "p:01",
+      "filters": { "relation_type": "same_company_overlap" },
+      "expected": ["p:02", "p:05", "p:06", "p:08", "p:11", "p:12"]
+    },
+    {
+      "name": "同校不判断同期",
+      "reference": "p:01",
+      "filters": { "relation_type": "same_school" },
+      "expected": ["p:02", "p:04", "p:05", "p:11", "p:13"]
+    },
+    {
+      "name": "共同经历并集",
+      "reference": "p:01",
+      "filters": {},
+      "expected": [
+        "p:02",
+        "p:03",
+        "p:04",
+        "p:05",
+        "p:06",
+        "p:08",
+        "p:11",
+        "p:12",
+        "p:13"
+      ]
+    },
+    {
+      "name": "参考人物与来源共同过滤",
+      "reference": "p:01",
+      "filters": {
+        "relation_type": "same_company_overlap",
+        "source": "expert"
+      },
+      "expected": ["p:05", "p:08"]
+    }
+  ],
+  "evidence": [
+    {
+      "candidate": "p:02",
+      "expected": [
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01a",
+          "f:02a",
+          [202101, 202212, 24]
+        ],
+        ["same_company", "org:a", "f:01b", "f:02a", null],
+        ["same_school", "school:x", "f:01s", "f:02s", null]
+      ]
+    },
+    {
+      "candidate": "p:03",
+      "expected": [
+        ["same_company", "org:a", "f:01a", "f:03a", null],
+        ["same_company", "org:a", "f:01b", "f:03a", null]
+      ]
+    },
+    {
+      "candidate": "p:04",
+      "expected": [
+        ["same_company", "org:a", "f:01a", "f:04a", null],
+        ["same_company", "org:a", "f:01b", "f:04a", null],
+        ["same_school", "school:x", "f:01s", "f:04s", null]
+      ]
+    },
+    {
+      "candidate": "p:05",
+      "expected": [
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01a",
+          "f:05a",
+          [202211, 202212, 2]
+        ],
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01b",
+          "f:05a",
+          [202401, 202611, 35]
+        ],
+        ["same_school", "school:x", "f:01s", "f:05s", null]
+      ]
+    },
+    { "candidate": "p:07", "expected": [] },
+    {
+      "candidate": "p:08",
+      "expected": [
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01a",
+          "f:08a",
+          [202001, 202112, 24]
+        ],
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01a",
+          "f:08b",
+          [202001, 202112, 24]
+        ],
+        ["same_company", "org:a", "f:01b", "f:08a", null],
+        ["same_company", "org:a", "f:01b", "f:08b", null]
+      ]
+    },
+    { "candidate": "p:10", "expected": [] },
+    {
+      "candidate": "p:11",
+      "expected": [
+        ["same_company", "org:a", "f:01a", "f:11a", null],
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01b",
+          "f:11a",
+          [202401, 202401, 1]
+        ],
+        ["same_school", "school:x", "f:01s", "f:11s", null]
+      ]
+    },
+    {
+      "candidate": "p:12",
+      "expected": [
+        [
+          "same_company_overlap",
+          "org:a",
+          "f:01a",
+          "f:12a",
+          [202112, 202112, 1]
+        ],
+        ["same_company", "org:a", "f:01b", "f:12a", null]
+      ]
+    }
+  ]
+}

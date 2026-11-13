@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "review_date": "2026-11-06",
+  "checks": {
+    "reference_tables": 15,
+    "fields": 254,
+    "latest_reference_fields": 84,
+    "raw_and_simulated_resume_fields": 170,
+    "edge_types": 3,
+    "properties_per_edge": 11,
+    "markdown_word_values": 1702,
+    "word_tables": 32,
+    "relative_links": 34,
+    "source_sha256": "536d70b5d92b34d44168a7bf30a7dcbe370b3ef108442ff7ca098ce47d49fb35"
+  },
+  "scope": "Document-only field/order/type/nullability coverage and Word/Markdown consistency; no database or application tests executed",
+  "visual_qa": {
+    "pages": 35,
+    "status": "all pages visually inspected; final pages 21 and 26 rechecked after editorial update; other 33 PNG hashes identical to inspected render",
+    "document_sha256": "7b1b8f09ffb8ad0533970e467965745f904234a30b47060e2b90069f1a361d5c",
+    "markdown_sha256": "0b4ee5c8ef28e09ba547af083aa6796857320ad8951e475a0b75e80b8c51944b"
+  }
+}

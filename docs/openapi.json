@@ -1,0 +1,2870 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "人物关系查询原型",
+    "description": "仅供本地虚构数据验证。接口不代表生产字段契约。",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/relations/paths": {
+      "post": {
+        "summary": "Find Paths",
+        "operationId": "find_paths_api_v1_relations_paths_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PathRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "summary": "Meta",
+        "operationId": "meta_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/persons/suggest": {
+      "get": {
+        "summary": "Person Suggestions",
+        "operationId": "person_suggestions_api_v1_persons_suggest_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/entities/suggest": {
+      "get": {
+        "summary": "Entity Suggestions",
+        "operationId": "entity_suggestions_api_v1_entities_suggest_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "organization",
+                "school",
+                "major",
+                "role"
+              ],
+              "type": "string",
+              "title": "Type"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitiesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/entities/{entity_id}": {
+      "get": {
+        "summary": "Entity Details",
+        "operationId": "entity_details_api_v1_entities__entity_id__get",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/exports/persons": {
+      "post": {
+        "summary": "Export People",
+        "operationId": "export_people_api_v1_exports_persons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/relations/evidence/search": {
+      "post": {
+        "summary": "Scoped Evidence",
+        "operationId": "scoped_evidence_api_v1_relations_evidence_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScopedEvidenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/persons/search": {
+      "post": {
+        "summary": "Search People",
+        "operationId": "search_people_api_v1_persons_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/persons/compare": {
+      "post": {
+        "summary": "Compare People",
+        "operationId": "compare_people_api_v1_persons_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/persons/{person_id}/relations/search": {
+      "post": {
+        "summary": "Related People",
+        "operationId": "related_people_api_v1_persons__person_id__relations_search_post",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/graph/expand": {
+      "post": {
+        "summary": "Expand Graph",
+        "operationId": "expand_graph_api_v1_graph_expand_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/persons/{person_id}/facts": {
+      "get": {
+        "summary": "Person Facts",
+        "operationId": "person_facts_api_v1_persons__person_id__facts_get",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/relations/evidence": {
+      "get": {
+        "summary": "Relation Evidence",
+        "operationId": "relation_evidence_api_v1_relations_evidence_get",
+        "parameters": [
+          {
+            "name": "reference_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Reference Id"
+            }
+          },
+          {
+            "name": "candidate_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ComparisonRequest": {
+        "properties": {
+          "reference_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Candidate Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference_id",
+          "candidate_id"
+        ],
+        "title": "ComparisonRequest"
+      },
+      "ComparisonResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "reference_facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "type": "array",
+            "title": "Reference Facts"
+          },
+          "candidate_facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "type": "array",
+            "title": "Candidate Facts"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "reference",
+          "candidate",
+          "reference_facts",
+          "candidate_facts",
+          "evidence"
+        ],
+        "title": "ComparisonResponse"
+      },
+      "ConnectionDetail": {
+        "properties": {
+          "hop_count": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Hop Count"
+          },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Person Ids"
+          },
+          "persons": {
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            },
+            "type": "array",
+            "title": "Persons"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/PathSegment"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hop_count",
+          "person_ids",
+          "persons",
+          "segments"
+        ],
+        "title": "ConnectionDetail"
+      },
+      "ConnectionSummary": {
+        "properties": {
+          "hop_count": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Hop Count"
+          },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Person Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hop_count",
+          "person_ids"
+        ],
+        "title": "ConnectionSummary"
+      },
+      "EntitiesResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Entity"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "items"
+        ],
+        "title": "EntitiesResponse"
+      },
+      "Entity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "school",
+              "major",
+              "role"
+            ],
+            "title": "Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "name"
+        ],
+        "title": "Entity"
+      },
+      "EntityResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "entity"
+        ],
+        "title": "EntityResponse"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorResponse"
+      },
+      "Evidence": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "relation_type": {
+            "type": "string",
+            "enum": [
+              "same_company",
+              "same_company_overlap",
+              "same_school",
+              "same_major"
+            ],
+            "title": "Relation Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/FactView"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/FactView"
+          },
+          "overlap_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlap Start"
+          },
+          "overlap_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlap End"
+          },
+          "overlap_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlap Months"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "relation_type",
+          "label",
+          "entity",
+          "reference",
+          "candidate",
+          "explanation"
+        ],
+        "title": "Evidence"
+      },
+      "EvidenceResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "reference",
+          "candidate",
+          "items"
+        ],
+        "title": "EvidenceResponse"
+      },
+      "ExpandRequest": {
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Person Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          },
+          "existing_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Existing Node Ids"
+          },
+          "existing_edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Existing Edge Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "person_id"
+        ],
+        "title": "ExpandRequest"
+      },
+      "ExpandResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/GraphData"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "graph",
+          "has_more"
+        ],
+        "title": "ExpandResponse"
+      },
+      "ExportItem": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/RelationSummary"
+            },
+            "type": "array",
+            "title": "Relations"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "connection_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "person",
+          "evidence",
+          "facts"
+        ],
+        "title": "ExportItem"
+      },
+      "ExportRequest": {
+        "properties": {
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          },
+          "data_version": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Data Version"
+          },
+          "expected_person_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Expected Person Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "filters",
+          "data_version",
+          "expected_person_ids"
+        ],
+        "title": "ExportRequest"
+      },
+      "ExportResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "scope": {
+            "type": "string",
+            "const": "current_page",
+            "title": "Scope",
+            "default": "current_page"
+          },
+          "facts_scope": {
+            "type": "string",
+            "const": "all_active_person_facts",
+            "title": "Facts Scope",
+            "default": "all_active_person_facts"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Person"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExportItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "filters",
+          "reference",
+          "items",
+          "has_more"
+        ],
+        "title": "ExportResponse"
+      },
+      "Fact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "person_id": {
+            "type": "string",
+            "title": "Person Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "employment",
+              "education",
+              "major"
+            ],
+            "title": "Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Id"
+          },
+          "start_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Month"
+          },
+          "end_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Month"
+          },
+          "is_current": {
+            "type": "boolean",
+            "title": "Is Current",
+            "default": false
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "source_system": {
+            "type": "string",
+            "enum": [
+              "expert",
+              "resume"
+            ],
+            "title": "Source System"
+          },
+          "source_record_id": {
+            "type": "string",
+            "title": "Source Record Id"
+          },
+          "experience_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience Key"
+          },
+          "position_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Title"
+          },
+          "education_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education Level"
+          },
+          "is_regular_enrollment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Regular Enrollment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "person_id",
+          "type",
+          "entity_id",
+          "source_system",
+          "source_record_id"
+        ],
+        "title": "Fact"
+      },
+      "FactView": {
+        "properties": {
+          "fact": {
+            "$ref": "#/components/schemas/Fact"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Entity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fact",
+          "entity"
+        ],
+        "title": "FactView"
+      },
+      "FactsResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "person",
+          "items"
+        ],
+        "title": "FactsResponse"
+      },
+      "GraphData": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          },
+          "truncation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncation Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphData"
+      },
+      "GraphEdge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fact_id": {
+            "type": "string",
+            "title": "Fact Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "target",
+          "label",
+          "fact_id"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "person",
+              "organization",
+              "school",
+              "major"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_reference": {
+            "type": "boolean",
+            "title": "Is Reference",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label"
+        ],
+        "title": "GraphNode"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version"
+        ],
+        "title": "HealthResponse"
+      },
+      "MetaResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "max_relation_hops": {
+            "type": "integer",
+            "title": "Max Relation Hops",
+            "default": 1
+          },
+          "person_count": {
+            "type": "integer",
+            "title": "Person Count"
+          },
+          "expert_count": {
+            "type": "integer",
+            "title": "Expert Count"
+          },
+          "resume_count": {
+            "type": "integer",
+            "title": "Resume Count"
+          },
+          "entity_count": {
+            "type": "integer",
+            "title": "Entity Count"
+          },
+          "fact_count": {
+            "type": "integer",
+            "title": "Fact Count"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "sqlite-demo",
+              "mysql-demo",
+              "mysql-source-slots",
+              "mysql-uuid-source",
+              "sqlite-numeric-source"
+            ],
+            "title": "Storage",
+            "default": "sqlite-demo"
+          },
+          "graph_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Model"
+          },
+          "relation_backend": {
+            "type": "string",
+            "enum": [
+              "sql",
+              "nebula-materialized"
+            ],
+            "title": "Relation Backend",
+            "default": "sql"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "person_count",
+          "expert_count",
+          "resume_count",
+          "entity_count",
+          "fact_count"
+        ],
+        "title": "MetaResponse"
+      },
+      "PathLimits": {
+        "properties": {
+          "candidate_limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Candidate Limit",
+            "default": 200
+          },
+          "path_limit": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Path Limit",
+            "default": 10
+          },
+          "fact_limit": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 1.0,
+            "title": "Fact Limit",
+            "default": 2000
+          },
+          "evidence_limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Evidence Limit",
+            "default": 20
+          },
+          "time_budget_ms": {
+            "type": "integer",
+            "maximum": 3000.0,
+            "minimum": 10.0,
+            "title": "Time Budget Ms",
+            "default": 1500
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PathLimits"
+      },
+      "PathRequest": {
+        "properties": {
+          "reference_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Candidate Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RelationScope"
+          },
+          "intermediate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "expert",
+                  "resume"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intermediate Source"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PathLimits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference_id",
+          "candidate_id"
+        ],
+        "title": "PathRequest"
+      },
+      "PathResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "query_backend": {
+            "type": "string",
+            "enum": [
+              "sql",
+              "nebula_sql",
+              "nebula"
+            ],
+            "title": "Query Backend",
+            "default": "sql"
+          },
+          "projection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RelationScope"
+          },
+          "intermediate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "expert",
+                  "resume"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intermediate Source"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PathLimits"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "direct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PathSegment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direct_checked": {
+            "type": "boolean",
+            "title": "Direct Checked"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/PersonPath"
+            },
+            "type": "array",
+            "title": "Paths"
+          },
+          "search_complete": {
+            "type": "boolean",
+            "title": "Search Complete"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          },
+          "truncation_reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "candidate_limit",
+                "path_limit",
+                "fact_limit",
+                "pair_limit",
+                "evidence_limit",
+                "time_limit",
+                "sql_limit",
+                "graph_limit"
+              ]
+            },
+            "type": "array",
+            "title": "Truncation Reasons"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "found",
+              "not_found",
+              "limited"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/PathStats"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "scope",
+          "intermediate_source",
+          "limits",
+          "reference",
+          "candidate",
+          "direct",
+          "direct_checked",
+          "paths",
+          "search_complete",
+          "truncated",
+          "truncation_reasons",
+          "status",
+          "message",
+          "stats"
+        ],
+        "title": "PathResponse"
+      },
+      "PathSegment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "from_person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "to_person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "evidence_truncated": {
+            "type": "boolean",
+            "title": "Evidence Truncated",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "from_person",
+          "to_person",
+          "evidence"
+        ],
+        "title": "PathSegment"
+      },
+      "PathStats": {
+        "properties": {
+          "candidates_examined": {
+            "type": "integer",
+            "title": "Candidates Examined",
+            "default": 0
+          },
+          "fact_rows_loaded": {
+            "type": "integer",
+            "title": "Fact Rows Loaded",
+            "default": 0
+          },
+          "evidence_pairs_examined": {
+            "type": "integer",
+            "title": "Evidence Pairs Examined",
+            "default": 0
+          },
+          "elapsed_ms": {
+            "type": "number",
+            "title": "Elapsed Ms",
+            "default": 0
+          },
+          "graph_calls": {
+            "type": "integer",
+            "title": "Graph Calls",
+            "default": 0
+          },
+          "graph_rows": {
+            "type": "integer",
+            "title": "Graph Rows",
+            "default": 0
+          },
+          "graph_candidates": {
+            "type": "integer",
+            "title": "Graph Candidates",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PathStats"
+      },
+      "Person": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "expert",
+                "resume"
+              ]
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "city",
+          "headline",
+          "sources"
+        ],
+        "title": "Person"
+      },
+      "PersonItem": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/RelationSummary"
+            },
+            "type": "array",
+            "title": "Relations"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "person"
+        ],
+        "title": "PersonItem"
+      },
+      "PersonPath": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "intermediate": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "segments": {
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/PathSegment"
+              },
+              {
+                "$ref": "#/components/schemas/PathSegment"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "intermediate",
+          "segments"
+        ],
+        "title": "PersonPath"
+      },
+      "PersonsResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "items"
+        ],
+        "title": "PersonsResponse"
+      },
+      "RelationScope": {
+        "properties": {
+          "relation_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "same_company",
+                  "same_company_overlap",
+                  "same_school",
+                  "same_major"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Type"
+          },
+          "require_same_school": {
+            "type": "boolean",
+            "title": "Require Same School",
+            "default": false
+          },
+          "relation_organization_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Relation Organization Ids"
+          },
+          "relation_start_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Start Month"
+          },
+          "relation_end_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation End Month"
+          },
+          "min_overlap_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2412.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Overlap Months"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RelationScope"
+      },
+      "RelationSummary": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "same_company",
+              "same_company_overlap",
+              "same_school",
+              "same_major"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "entity_name": {
+            "type": "string",
+            "title": "Entity Name"
+          },
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "entity_name",
+          "evidence_id"
+        ],
+        "title": "RelationSummary"
+      },
+      "ScopedEvidenceRequest": {
+        "properties": {
+          "reference_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Candidate Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference_id",
+          "candidate_id"
+        ],
+        "title": "ScopedEvidenceRequest"
+      },
+      "SearchRequest": {
+        "properties": {
+          "relation_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "same_company",
+                  "same_company_overlap",
+                  "same_school",
+                  "same_major"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Type"
+          },
+          "require_same_school": {
+            "type": "boolean",
+            "title": "Require Same School",
+            "default": false
+          },
+          "relation_organization_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Relation Organization Ids"
+          },
+          "relation_start_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Start Month"
+          },
+          "relation_end_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation End Month"
+          },
+          "min_overlap_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2412.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Overlap Months"
+          },
+          "max_hops": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Max Hops",
+            "default": 1
+          },
+          "major_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Major Ids"
+          },
+          "position_titles": {
+            "items": {
+              "type": "string",
+              "maxLength": 255,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Position Titles"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id"
+          },
+          "school_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Id"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Id"
+          },
+          "organization_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Organization Ids"
+          },
+          "school_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "School Ids"
+          },
+          "role_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Role Ids"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "expert",
+                  "resume"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "start_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Month"
+          },
+          "end_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Month"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          },
+          "page_size": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Page Size",
+            "default": 20
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SearchRequest"
+      },
+      "SearchResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "applied_filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PersonItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Person"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/GraphData"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "applied_filters",
+          "items",
+          "next_cursor",
+          "has_more",
+          "graph"
+        ],
+        "title": "SearchResponse"
+      }
+    }
+  }
+}

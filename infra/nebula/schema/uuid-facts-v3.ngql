@@ -1,0 +1,61 @@
+-- Business fact schema uuid-facts-v3, no person names.
+-- Model uuid-relations-v5 = this file + person-relations-v3.ngql in a NEW space.
+-- VID type FIXED_STRING(128). Application enforces source, dates and privacy rules.
+
+CREATE TAG person (
+    source_system STRING NOT NULL,
+    serial_number STRING NOT NULL
+) COMMENT = 'Person source and business number, display names stay in MySQL';
+
+CREATE TAG company (
+    name STRING NOT NULL,
+    company_code STRING NOT NULL
+) COMMENT = 'Company name and standard business code, identity is UUID VID';
+
+CREATE TAG school (
+    name STRING NOT NULL,
+    school_code STRING NOT NULL
+) COMMENT = 'School name and standard business code, identity is UUID VID';
+
+CREATE TAG major (
+    name STRING NOT NULL,
+    major_code STRING NOT NULL
+) COMMENT = 'Major name and standard business code, identity is UUID VID';
+
+-- Fact rank is graph_edge_mapping.id, NOT the raw experience row id.
+-- experience_key = source_system:source_table:raw_row_id, derived by the adapter.
+CREATE EDGE worked_at (
+    experience_key STRING NOT NULL,
+    position_title STRING NULL,
+    start_month INT32 NULL,
+    end_month INT32 NULL,
+    is_current BOOL NOT NULL
+) COMMENT = 'One work experience, company and position share the same raw row';
+
+-- Both education edges copy the same row key and education attributes.
+-- Do not infer booleans from the source enrollment string.
+CREATE EDGE studied_at (
+    experience_key STRING NOT NULL,
+    education_level STRING NULL,
+    is_regular_enrollment STRING NULL,
+    start_month INT32 NULL,
+    end_month INT32 NULL
+) COMMENT = 'School fact with education row identity and attributes';
+
+CREATE EDGE studied_major (
+    experience_key STRING NOT NULL,
+    education_level STRING NULL,
+    is_regular_enrollment STRING NULL,
+    start_month INT32 NULL,
+    end_month INT32 NULL
+) COMMENT = 'Major fact, same education row key as its school fact when present';
+
+CREATE TAG projection_meta (
+    schema_version STRING NOT NULL,
+    projection_id STRING NOT NULL,
+    snapshot_sha256 FIXED_STRING(64) NOT NULL,
+    reference_month INT32 NOT NULL,
+    state STRING NOT NULL
+) COMMENT = 'Immutable projection metadata, schema_version uuid-relations-v5';
+
+-- No property indexes or TTL by default. Only valid facts enter the snapshot.

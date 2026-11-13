@@ -1,0 +1,11 @@
+{
+  "schema_version": "uuid-facts-v1",
+  "date": "2026-11-06",
+  "status": "failed",
+  "schema_sha256": "9bdc50bdc3292b996deb7bb0d80881d5a06bceee3015d2c1fd9a241bb7f0d940",
+  "scope": "local fictional DDL smoke; no MySQL, Supabase, API migration or capacity test",
+  "checks": [],
+  "temporary_space_dropped": false,
+  "space": "relationship_lab_ddl_809070837879",
+  "error_type": "RuntimeError"
+}

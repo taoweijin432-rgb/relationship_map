@@ -1,0 +1,237 @@
+{
+  "data_mode": "mock",
+  "generation": "mock-generation-v1",
+  "cursor": {
+    "source": "mock-mysql",
+    "position": {
+      "kind": "offline-replay",
+      "offset": 0
+    }
+  },
+  "tables": {
+    "mock.experts": [
+      {
+        "id": 1,
+        "name": "模拟甲",
+        "serial_number": "expert-1",
+        "deleted_at": null
+      }
+    ],
+    "mock.experts_work_experience": [
+      {
+        "id": 1,
+        "expert_id": 1,
+        "start_date": "2020-01-01T00:00:00",
+        "end_date": null,
+        "deleted_at": null,
+        "is_employed": 1,
+        "position_title": "模拟工程师"
+      }
+    ],
+    "mock.experts_education_experience": [
+      {
+        "id": 1,
+        "expert_id": 1,
+        "start_date": "2010-09-01T00:00:00",
+        "end_date": "2014-06-30T00:00:00",
+        "deleted_at": null,
+        "education_level": "本科",
+        "is_regular_enrollment": "统招"
+      }
+    ],
+    "mock.resume": [
+      {
+        "id": 1,
+        "name": "模拟乙",
+        "serial_number": "resume-1",
+        "deleted_at": null
+      }
+    ],
+    "mock.resume_work_experience": [
+      {
+        "id": 1,
+        "resume_id": 1,
+        "start_date": "2020-01-01T00:00:00",
+        "end_date": null,
+        "deleted_at": null,
+        "is_employed": 1,
+        "position_title": "模拟工程师"
+      }
+    ],
+    "mock.resume_education_experience": [
+      {
+        "id": 1,
+        "resume_id": 1,
+        "start_date": "2010-09-01T00:00:00",
+        "end_date": "2014-06-30T00:00:00",
+        "deleted_at": null,
+        "education_level": "本科",
+        "is_regular_enrollment": "统招"
+      }
+    ],
+    "mock.graph_company_entity": [
+      {
+        "id": 1,
+        "standard_name": "模拟company",
+        "company_code": "company-1",
+        "verification_status": "模拟有效",
+        "deleted_at": null
+      },
+      {
+        "id": 2,
+        "standard_name": "模拟公司B",
+        "company_code": "company-2",
+        "verification_status": "模拟有效",
+        "deleted_at": null
+      }
+    ],
+    "mock.graph_school_entity": [
+      {
+        "id": 1,
+        "standard_name": "模拟school",
+        "school_code": "school-1",
+        "verification_status": "模拟有效",
+        "deleted_at": null
+      }
+    ],
+    "mock.graph_major_entity": [
+      {
+        "id": 1,
+        "standard_name": "模拟major",
+        "major_code": "major-1",
+        "verification_status": "模拟有效",
+        "deleted_at": null
+      }
+    ],
+    "mock.graph_edge_mapping": [
+      {
+        "id": 101,
+        "source_system": "expert",
+        "source_table": "experts_work_experience",
+        "source_field_id": 1,
+        "source_field": "company_name",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "worked_at",
+        "deleted_at": null
+      },
+      {
+        "id": 102,
+        "source_system": "expert",
+        "source_table": "experts_education_experience",
+        "source_field_id": 1,
+        "source_field": "school_name",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "studied_at",
+        "deleted_at": null
+      },
+      {
+        "id": 103,
+        "source_system": "expert",
+        "source_table": "experts_education_experience",
+        "source_field_id": 1,
+        "source_field": "major",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "studied_major",
+        "deleted_at": null
+      },
+      {
+        "id": 104,
+        "source_system": "resume",
+        "source_table": "resume_work_experience",
+        "source_field_id": 1,
+        "source_field": "company_name",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "worked_at",
+        "deleted_at": null
+      },
+      {
+        "id": 105,
+        "source_system": "resume",
+        "source_table": "resume_education_experience",
+        "source_field_id": 1,
+        "source_field": "school_name",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "studied_at",
+        "deleted_at": null
+      },
+      {
+        "id": 106,
+        "source_system": "resume",
+        "source_table": "resume_education_experience",
+        "source_field_id": 1,
+        "source_field": "major",
+        "source_person_id": 1,
+        "standard_entity_id": 1,
+        "edge_type": "studied_major",
+        "deleted_at": null
+      }
+    ],
+    "mock.graph_expert_name_mapping": [
+      {
+        "id": 1,
+        "entity_type": "company",
+        "source_namespace": "expert.work.company",
+        "source_field_id": "1",
+        "company_id": 1,
+        "school_id": null,
+        "major_id": null,
+        "processing_status": "已匹配"
+      },
+      {
+        "id": 2,
+        "entity_type": "school",
+        "source_namespace": "expert.education.school",
+        "source_field_id": "1",
+        "company_id": null,
+        "school_id": 1,
+        "major_id": null,
+        "processing_status": "已匹配"
+      },
+      {
+        "id": 3,
+        "entity_type": "major",
+        "source_namespace": "expert.education.major",
+        "source_field_id": "1",
+        "company_id": null,
+        "school_id": null,
+        "major_id": 1,
+        "processing_status": "已匹配"
+      },
+      {
+        "id": 4,
+        "entity_type": "company",
+        "source_namespace": "resume.work.company",
+        "source_field_id": "1",
+        "company_id": 1,
+        "school_id": null,
+        "major_id": null,
+        "processing_status": "已匹配"
+      },
+      {
+        "id": 5,
+        "entity_type": "school",
+        "source_namespace": "resume.education.school",
+        "source_field_id": "1",
+        "company_id": null,
+        "school_id": 1,
+        "major_id": null,
+        "processing_status": "已匹配"
+      },
+      {
+        "id": 6,
+        "entity_type": "major",
+        "source_namespace": "resume.education.major",
+        "source_field_id": "1",
+        "company_id": null,
+        "school_id": null,
+        "major_id": 1,
+        "processing_status": "已匹配"
+      }
+    ]
+  }
+}

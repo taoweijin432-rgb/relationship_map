@@ -1,0 +1,127 @@
+{
+  "data_mode": "mock",
+  "status": "experimental_verified",
+  "mysql_version": "9.7.1",
+  "database": "relationship_lab_handoff_aab83496cf21",
+  "input_sha256": {
+    "data/handoff-trial/run-v3/source-snapshot.json": "6ea3177056195733ba0e50da22c357904023269e3b58f54de72845f1d0f6d472",
+    "data/handoff-trial/run-v3/synthetic-raw-experiences.json": "c47a114c43657c98c08dd7b77b52e6ecf0760b64bbe25708d9783b5998cebf23",
+    "/Users/yuka/Documents/图数据库投影三表设计与独立词典维护方案.docx": "7e386037f0d463f2359adbd45db699676f538ac8992ad0090c927628ef085b26"
+  },
+  "source_digest": "def3e6ec6076bf4c3819b49df8630dc0ad93bb080505aa48e091ca1a88b4194c",
+  "input_unchanged": true,
+  "source_unchanged": true,
+  "counts": {
+    "experts": 18,
+    "experts_education_experience": 18,
+    "experts_project_experience": 2,
+    "experts_work_experience": 19,
+    "resume": 46,
+    "resume_education_experience": 42,
+    "resume_project_experience": 2,
+    "resume_work_experience": 43,
+    "Relationship_Graph_entity": 21,
+    "Relationship_Graph_edge_mapping": 252,
+    "Relationship_Graph_entity_alias": 34
+  },
+  "bridge_entries": 15,
+  "stable_slot_checks": {
+    "rank": 1001,
+    "rank_unchanged": true,
+    "owner_and_target_changed": true,
+    "entity_rename_keeps_id": true,
+    "rolled_back": true,
+    "live_incremental_cleanup": false
+  },
+  "graph": {
+    "space": "relationship_lab_three_6a9040da29b3",
+    "reader": "rq_8abe354baec1",
+    "format": "source-slot-lab-v2",
+    "nodes": 84,
+    "edges": 246,
+    "source_digest": "def3e6ec6076bf4c3819b49df8630dc0ad93bb080505aa48e091ca1a88b4194c",
+    "warning": "仅独立实验；不能配置为现有 API 图投影"
+  },
+  "business_checks": {
+    "overlap": [
+      {
+        "left_rank": 1001,
+        "right_rank": 1005,
+        "left_person": "p:expert:1",
+        "right_person": "p:resume:2",
+        "entity": "e:307",
+        "start_month": 202101,
+        "end_month": 202212,
+        "months": 24
+      }
+    ],
+    "nonoverlap": [
+      {
+        "left_rank": 1001,
+        "right_rank": 1009,
+        "left_person": "p:expert:1",
+        "right_person": "p:resume:3",
+        "entity": "e:307",
+        "start_month": null,
+        "end_month": null,
+        "months": null
+      },
+      {
+        "left_rank": 1241,
+        "right_rank": 1009,
+        "left_person": "p:expert:1",
+        "right_person": "p:resume:3",
+        "entity": "e:307",
+        "start_month": null,
+        "end_month": null,
+        "months": null
+      }
+    ],
+    "schools": [
+      {
+        "left_rank": 1003,
+        "right_rank": 1007,
+        "left_person": "p:expert:1",
+        "right_person": "p:resume:2",
+        "entity": "e:308",
+        "start_month": null,
+        "end_month": null,
+        "months": null
+      }
+    ],
+    "paths": [
+      {
+        "middle": "p:resume:7",
+        "first": [
+          {
+            "left_rank": 1001,
+            "right_rank": 1243,
+            "left_person": "p:expert:1",
+            "right_person": "p:resume:7",
+            "entity": "e:307",
+            "start_month": 202001,
+            "end_month": 202112,
+            "months": 24
+          }
+        ],
+        "second": [
+          {
+            "left_rank": 1025,
+            "right_rank": 1029,
+            "left_person": "p:resume:7",
+            "right_person": "p:resume:8",
+            "entity": "e:304",
+            "start_month": 202101,
+            "end_month": 202611,
+            "months": 71
+          }
+        ]
+      }
+    ],
+    "evidence_source_rows_verified": true,
+    "graph_computes_time": true
+  },
+  "cloud_access": false,
+  "api_projection_replaced": false,
+  "warning": "三表／真实形状原表／新 VID 与 Rank 独立验证；不是正式增量链路或现有 API 图格式迁移"
+}

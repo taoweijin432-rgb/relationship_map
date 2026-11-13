@@ -1,0 +1,1201 @@
+{
+  "review_date": "2026-11-10",
+  "document": "/Users/yuka/Documents/副本人物关系图谱MySQL表结构设计说明_文件映射版.docx",
+  "sha256": "eafd2c32b398ab4a09d26b2b2e90df3d1d78ad8ca874593dd82eddfd358d4b1d",
+  "table_count": 9,
+  "blocks": [
+    {
+      "kind": "paragraph",
+      "text": "人物关系图谱 MySQL 表结构设计说明"
+    },
+    {
+      "kind": "paragraph",
+      "text": "本设计包含三张标准实体表、同步批次表及事实映射表，共五张 MySQL 表。原始名称与标准实体的对应关系由独立 JSON 数据文件保存，完整处理与审核记录继续保存在 Supabase。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "一 表结构总览"
+    },
+    {
+      "kind": "table",
+      "index": 0
+    },
+    {
+      "kind": "paragraph",
+      "text": "数据库结构采用 MySQL 8.0.24、InnoDB、utf8mb4_bin。三张标准实体表使用 MySQL 自增 BIGINT 主键，并以唯一 uuid 保留 Supabase 来源 ID；重复同步按 uuid 更新，保持既有整数 ID 不变。事实映射表使用独立稳定 BIGINT 主键。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "共用管理字段"
+    },
+    {
+      "kind": "table",
+      "index": 1
+    },
+    {
+      "kind": "paragraph",
+      "text": "以上五个管理字段适用于三张标准实体表。来源时间转换为 UTC DATETIME(6)。映射 JSON 文件不使用逐条同步管理字段，其版本由文件级清单管理。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "二 公司标准实体表"
+    },
+    {
+      "kind": "paragraph",
+      "text": "graph_company_entity"
+    },
+    {
+      "kind": "paragraph",
+      "text": "保存独立的标准公司实体。专用字段 8 个，加共用管理字段 5个，共 13 个字段。ID 用于稳定关联，company_code 用于业务编号展示和上下级数组引用，标准名称用于展示与检索。"
+    },
+    {
+      "kind": "table",
+      "index": 2
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键 索引与约束"
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键为 id；company_code 设置唯一索引，standard_name 设置普通索引。ID 与业务编号分别承担关联和编号检索职责，名称不唯一。former_names 为 JSON 字符串数组，不另设名称唯一约束。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "child_company_codes 对应子公司列，包含直接子公司及分公司编号；parent_company_codes 对应母公司列，包含直接母公司及总公司编号，不包含递归推导的间接上下级。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "两字段使用 MySQL JSON 类型：已确认的关联保存为编号数组，例如 [\"B001\", \"B002\"]；明确确认无对应关系和尚未确认时都保存 JSON 数字 0。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "上下级编号数组对应 graph_company_entity.company_code，不在 JSON 成员上设置逐项外键。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "sync_batch_id 外键关联 graph_sync_batch.id，并设置普通索引；外键不配置级联删除。 deleted_at 用于逻辑删除，判断当前实体是否有效时需同时考虑删除标记和核验状态。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "三 学校标准实体表"
+    },
+    {
+      "kind": "paragraph",
+      "text": "graph_school_entity"
+    },
+    {
+      "kind": "paragraph",
+      "text": "保存标准学校实体及已有历史名称、官方标识码和地区信息。专用字段 9 个，加共用管理字段 5 个，共 14个字段；不将学校词典字段解释为个人教育经历属性。"
+    },
+    {
+      "kind": "table",
+      "index": 3
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键 索引与约束"
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键为 id；school_code 设置唯一索引。standard_name 设置普通索引，不设置唯一约束。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "official_code 可空且不设置唯一约束，按字符串保留，不替代内部 school_code。former_names 为 JSON 字符串数组；地区字段保留已有内容，不要求每条实体均有值。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "sync_batch_id 为批次外键并设置普通索引。外键不配置级联删除。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "四 专业标准实体表"
+    },
+    {
+      "kind": "paragraph",
+      "text": "graph_major_entity"
+    },
+    {
+      "kind": "paragraph",
+      "text": "保存专业或学科词条的稳定标识、业务编号、标准名称和核验状态。专用字段 5 个，加共用管理字段 5 个，共 10 个字段；个人学历、学位和就读时间由原始教育经历提供。"
+    },
+    {
+      "kind": "table",
+      "index": 4
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键 索引与约束"
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键为 id；major_code 设置唯一索引，standard_name 设置普通索引，不设置唯一约束。专业名称和业务编号均不替代 ID 外键。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "sync_batch_id 为批次外键并设置普通索引。外键不配置级联删除。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "五 同步批次表"
+    },
+    {
+      "kind": "paragraph",
+      "text": "graph_sync_batch"
+    },
+    {
+      "kind": "paragraph",
+      "text": "保存每次从 Supabase 同步到 MySQL 的批次管理信息，完整结构为 10 个字段。三张标准实体表的 sync_batch_id 引用本表；映射文件清单记录对应批次，事实映射表未设计该批次字段。"
+    },
+    {
+      "kind": "table",
+      "index": 5
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键 索引与约束"
+    },
+    {
+      "kind": "paragraph",
+      "text": "主键为自增 id。业务表通过 sync_batch_id 外键引用本表，不对 source_project_id 设置唯一约束，同一来源项目可以有多个批次。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "sync_mode 以 CHECK 约束限定为 full、incremental；status 限定为 running、validated、succeeded、failed。时间字段统一使用 UTC，尚未确定的快照或结束时间保留 NULL。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "expected_counts、actual_counts 使用以目标表名为键、数量为值的 JSON 对象。两者按同一批次和统计范围比较；增量批次数量不与目标全表数量直接比较。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "六 名称映射文件方案"
+    },
+    {
+      "kind": "paragraph",
+      "text": "MySQL 不创建来源名称映射表。Supabase name_mapping 继续保存原始记录、拆分结果、匹配状态、候选、证据及审核历史；同步程序将可用匹配结果全量生成项目数据文件，供图边生成程序读取。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "文件组织与结构"
+    },
+    {
+      "kind": "paragraph",
+      "text": "按来源表和来源字段分别生成文件，文件名同时确定来源定位范围和实体类型。例如 experts_work_experience.company_name.json、experts_education_experience.school_name.json、experts_education_experience.major.json；简历来源沿用相同命名规则。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "每个文件以原始经历表记录 ID 的字符串作为键，值为二元数组：第一项是完整原始名称，第二项是标准实体 UUID 数组。键不是 Supabase name_mapping.id，也不是人物 ID。标准名和业务编号从 MySQL 标准表按 UUID 获取，不在文件重复保存。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "{  \"123\": [\"单个公司原始名称\", [\"标准公司UUID-A\"]],  \"124\": [\"甲公司、乙公司\", [\"标准公司UUID-B\", \"标准公司UUID-C\"]]}"
+    },
+    {
+      "kind": "paragraph",
+      "text": "同一来源记录的拆分映射先分组，校验原文一致，再合并去重 UUID，禁止重复 JSON 键覆盖。第一版仅输出全部有效拆分项均已匹配且标准实体可用的来源记录；仍有待确认项的来源暂不输出。文件只保存结果，不携带逐条状态、时间、映射 UUID 或数据库外键列。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "完整原文与来源 ID 用于回查同一条经历；学校和专业必须按同一来源表、同一教育经历 ID 配对，不能把同一人物全部学校与专业交叉组合。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "全量更新与版本发布"
+    },
+    {
+      "kind": "paragraph",
+      "text": "每次同步分别读取标准实体和名称映射的最新数据。即使标准表未变化，映射审核、撤销或改关联也需要更新文件。先生成临时版本，校验格式、来源 ID、条数、UUID 和文件校验值；标准表同步成功且所有输出 UUID 能在对应目标表找到后，统一切换整个文件版本。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "使用 manifest.json 记录版本、生成时间、同步批次及各文件名称、记录数和 SHA256。数据库提交和文件发布不天然构成同一事务，应由同步程序协调；只有标准表同步和文件校验均成功才发布，失败时继续保留上一可用版本。不得先删除旧文件或逐个覆盖造成新旧混读，发布并确认加载正常后再清理旧版本。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "文件保存在项目数据目录，由程序生成，不手工编辑、不打包进入网页前端。百万级数据可按来源表、字段进一步分片，并在同一版本清单登记。"
+    },
+    {
+      "kind": "paragraph",
+      "text": "七 边投影映射的来源定位字段"
+    },
+    {
+      "kind": "paragraph",
+      "text": "表名 graph_edge_mapping，由原关联表改造。每条记录对应来源经历的一个实体字段槽位，保存稳定编号、来源定位，不保存完整经历 JSON。"
+    },
+    {
+      "kind": "table",
+      "index": 6
+    },
+    {
+      "kind": "table",
+      "index": 7
+    },
+    {
+      "kind": "paragraph",
+      "text": "来源字段到边类型"
+    },
+    {
+      "kind": "table",
+      "index": 8
+    },
+    {
+      "kind": "paragraph",
+      "text": "图边生成程序读取已发布的 JSON 映射文件，通过来源表、来源字段及原始经历记录 ID 获取标准实体 UUID，再按文件确定的实体类型查询对应 MySQL 标准表，取得整数主键并写入 graph_edge_mapping.standard_entity_id。未找到对应实体、实体已删除或不满足使用条件时，不生成有效图边并记录异常。文件中的多个 UUID 不自动表示多段独立经历，需结合原始经历及业务规则确定关联对象。"
+    }
+  ],
+  "tables": [
+    [
+      [
+        "表名",
+        "名称",
+        "主要内容"
+      ],
+      [
+        "graph_company_entity",
+        "公司标准实体",
+        "公司标识、标准名称、历史名称及直接上下级编号"
+      ],
+      [
+        "graph_school_entity",
+        "学校标准实体",
+        "学校标识、名称及官方标识码"
+      ],
+      [
+        "graph_major_entity",
+        "专业标准实体",
+        "专业标识、标准名称及核验状态"
+      ],
+      [
+        "graph_sync_batch",
+        "同步批次",
+        "批次标识、状态与数量记录"
+      ],
+      [
+        "graph_edge_mapping",
+        "事实映射",
+        "来源经历字段槽位、人物归属及图边稳定编号"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "必填。来源记录首次创建时间，用于保留来源生命周期；统一转换为 UTC，与目标导入时间区分。",
+        "对应来源表.created_at；时区转换后写入。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "必填。来源记录最近更新时间，用于核对同步版本；标准实体使用来源时间，不用导入时间替代。",
+        "对应来源表.updated_at；时区转换后写入。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "必填。该行最近一次被同步批次写入或确认的批次号，外键关联 graph_sync_batch.id；不是来源处理批号。",
+        "MySQL graph_sync_batch.id；同步程序填写，无同名来源列。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "必填。该行最近一次在 MySQL 写入或同步确认的时间，统一使用 UTC；与 source_updated_at 含义不同。",
+        "同步程序生成，无对应 Supabase 字段。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "可空。目标端标记逻辑删除的 UTC 时间。",
+        "同步程序在标记删除时生成，无对应来源时间列。"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "company_standard.id"
+      ],
+      [
+        "company_code",
+        "VARCHAR(64)",
+        "必填。公司业务编号，用于展示、检索和上下级编号数组引用；本表内唯一。不能依据编号前缀推断公司层级。",
+        "company_standard.company_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化后的公司名称，作为实体展示名称；名称可以修改，也可能重名，不作为主键或唯一识别依据。",
+        "company_standard.standard_name"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "可空。已有历史名称，保存为 JSON 字符串数组；保留来源空值及空数组的区别，不把历史名称拆成新实体。",
+        "company_standard.former_names；PostgreSQL text[] 转为 JSON 数组。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。公司标准实体的核验状态，保留来源原值，用于判断实体是否满足使用条件；不等同于名称映射的匹配状态。",
+        "company_standard.verification_status"
+      ],
+      [
+        "child_company_codes",
+        "JSON",
+        "可空。直接子公司及分公司的业务编号数组，成员对应本表 company_code，不含递归下级。按本文约定，无关系及未确认均保存 JSON 数字 0。",
+        "company_standard_display.子公司；以公司ID 对应 company_standard.id。"
+      ],
+      [
+        "parent_company_codes",
+        "JSON",
+        "可空。直接母公司及总公司的业务编号数组，成员对应本表 company_code，不含递归上级。按本文约定，无关系及未确认均保存 JSON 数字 0。",
+        "company_standard_display.母公司；以公司ID 对应 company_standard.id。"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "school_standard.id"
+      ],
+      [
+        "school_code",
+        "VARCHAR(64)",
+        "必填。学校业务编号，本表内唯一，用于展示和按编号查询；与 ID 主键、官方标识码分别保存。",
+        "school_standard.school_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化学校名称，用于展示和检索；允许更名和同名，不设置唯一约束，不据此合并实体。",
+        "school_standard.standard_name"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "可空。学校已有历史名称，保存为 JSON 字符串数组；只保存来源已有名称，不补充推测的曾用名。",
+        "school_standard.former_names；PostgreSQL text[] 转为 JSON 数组。"
+      ],
+      [
+        "official_code",
+        "VARCHAR(64)",
+        "可空。来源已有的学校官方标识码，按字符串保存，保留前导零；缺失时为空，不设置唯一约束，不替代 school_code。",
+        "school_standard.official_code"
+      ],
+      [
+        "country_region",
+        "VARCHAR(128)",
+        "可空。学校所在国家或地区，直接保留来源文本；缺失时为空，不根据人物国籍或其他经历推断。",
+        "school_standard.country_region"
+      ],
+      [
+        "city",
+        "VARCHAR(128)",
+        "可空。学校所在城市，直接保留来源文本；缺失时为空，不作为学校实体的独立识别键。",
+        "school_standard.city"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。学校实体核验状态，保留来源原值；描述标准实体本身，与某条教育经历是否成功匹配分别判断。",
+        "school_standard.verification_status"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "major_standard.id"
+      ],
+      [
+        "major_code",
+        "VARCHAR(64)",
+        "必填。专业业务编号，本表内唯一，用于展示和按编号查询；不是教育主管部门目录代码，也不表示个人学历。",
+        "major_standard.major_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化后的专业或学科名称；允许重名和修改，不设置唯一约束，不据此推断个人学位、层次或就读学校。",
+        "major_standard.standard_name"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。专业实体核验状态，保留来源原值；用于实体筛选，不代表某个人已取得该专业的学历或学位。",
+        "major_standard.verification_status"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT UNSIGNED",
+        "必填。批次主键，MySQL 自增生成；供业务表的 sync_batch_id 引用。",
+        "MySQL AUTO_INCREMENT 生成。"
+      ],
+      [
+        "source_project_id",
+        "VARCHAR(64)",
+        "必填。本批次读取的 Supabase 项目标识，用于区分同步来源。",
+        "同步程序读取来源项目配置。"
+      ],
+      [
+        "sync_mode",
+        "VARCHAR(16)",
+        "必填。同步模式：full 为全量，incremental 为增量。",
+        "同步程序填写本次运行模式。"
+      ],
+      [
+        "status",
+        "VARCHAR(16)",
+        "必填。批次当前状态：running、validated、succeeded、failed，含义见约束说明。",
+        "同步程序维护执行状态。"
+      ],
+      [
+        "started_at",
+        "DATETIME(6)",
+        "必填。批次开始的 UTC 时间，保留微秒精度，用于排序及耗时统计。",
+        "同步程序在批次开始时生成。"
+      ],
+      [
+        "snapshot_at",
+        "DATETIME(6)",
+        "可空。来源一致快照或明确截止时间，使用 UTC；未知时为空。",
+        "同步程序记录来源读取边界。"
+      ],
+      [
+        "finished_at",
+        "DATETIME(6)",
+        "可空。批次成功或失败结束的 UTC 时间；运行期间为空。",
+        "同步程序在批次结束时生成。"
+      ],
+      [
+        "expected_counts",
+        "JSON",
+        "可空。按目标表名保存本批次预期数量的 JSON 对象，用于数量校验。",
+        "同步程序根据本批次导出结果统计。"
+      ],
+      [
+        "actual_counts",
+        "JSON",
+        "可空。本批次实际写入或确认数量，按表名保存 JSON；不是全表总量。",
+        "同步程序统计 MySQL 本批次结果。"
+      ],
+      [
+        "error_message",
+        "TEXT",
+        "可空。失败原因摘要；正常批次可为空，不保存凭证或完整连接串。",
+        "同步程序记录批次错误。"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT",
+        "主键，并作为 NebulaGraph Rank；正数且不超过 2^63−1。首次分配后沿用。",
+        "新建来源字段槽位时分配；"
+      ],
+      [
+        "source_system",
+        "VARCHAR(16)",
+        "取值 expert =专家来源、resume =简历来源。",
+        "枚举值"
+      ],
+      [
+        "source_table",
+        "VARCHAR(64)",
+        "本条经历的真实来源表名，限定为 Expert 与 Resume 两边各三类经历表。experts/resume_project_experience\nexperts/resume_work_experience\nexperts/resume_education_experience",
+        "真实表名"
+      ],
+      [
+        "source_field_id",
+        "BIGINT",
+        "来源经历行的真实主键。不同经历表中的相同数值不代表同一条经历。",
+        "experts/resume_work_experience.id\nexperts/resume_project_experience.id\nexperts/resume_education_experience.id"
+      ],
+      [
+        "source_field",
+        "VARCHAR(64)",
+        "产生该关联的真实来源列名，作为稳定槽位的一部分。当前字段包括 company_name、school_name、major。",
+        "实际命中的来源经历列名"
+      ],
+      [
+        "source_person_id",
+        "BIGINT",
+        "当前所属来源人物的主键。迁移经历时更新归属。",
+        "Expert 的 expert_id；Resume 的 resume_id。"
+      ],
+      [
+        "standard_entity_id",
+        "BIGINT",
+        "MySQL 标准实体表的整数主键，不是 Supabase UUID。根据 edge_type 确定对应实体表。",
+        "graph_company/school/major_entity.id"
+      ],
+      [
+        "edge_type",
+        "VARCHAR(64)",
+        "写入图数据库的边类型名称，表示人物与实体之间的关联含义。详情见下表：来源字段到边类型",
+        "枚举值"
+      ],
+      [
+        "created_at",
+        "DATETIME(6)",
+        "创建时间。",
+        "数据库生成"
+      ],
+      [
+        "updated_at",
+        "DATETIME(6)",
+        "更新时间",
+        "数据库生成"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "删除时间",
+        "数据库生成"
+      ]
+    ],
+    [
+      [
+        "图中对象",
+        "读取位置",
+        "写入规则"
+      ],
+      [
+        "人物节点",
+        "原始人物表",
+        "由来源和人物主键生成 VID；详情仍读源表"
+      ],
+      [
+        "实体节点",
+        "graph_company/school/major表",
+        "VID 为 e:company/school/major:standard_entity_id，类型和名称来自词典"
+      ],
+      [
+        "人物实体边",
+        "源经历与词典匹配结果",
+        "Rank 为 graph_edge_mapping.id，日期和证据定位来自源经历"
+      ],
+      [
+        "人物之间关系",
+        "查询时计算",
+        "共同实体产生候选，再回源判断时间、角色和证据"
+      ]
+    ],
+    [
+      [
+        "来源字段含义",
+        "关联角色",
+        "图边类型edge_type"
+      ],
+      [
+        "工作经历表.company_name",
+        "employer 任职组织",
+        "worked_at"
+      ],
+      [
+        "教育经历表.school_name",
+        "school 就读学校",
+        "studied_at"
+      ],
+      [
+        "教育经历表.major",
+        "major 所学专业",
+        "studied_major"
+      ]
+    ]
+  ],
+  "mysql_table_fields": {
+    "graph_company_entity": [
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "company_standard.id"
+      ],
+      [
+        "company_code",
+        "VARCHAR(64)",
+        "必填。公司业务编号，用于展示、检索和上下级编号数组引用；本表内唯一。不能依据编号前缀推断公司层级。",
+        "company_standard.company_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化后的公司名称，作为实体展示名称；名称可以修改，也可能重名，不作为主键或唯一识别依据。",
+        "company_standard.standard_name"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "可空。已有历史名称，保存为 JSON 字符串数组；保留来源空值及空数组的区别，不把历史名称拆成新实体。",
+        "company_standard.former_names；PostgreSQL text[] 转为 JSON 数组。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。公司标准实体的核验状态，保留来源原值，用于判断实体是否满足使用条件；不等同于名称映射的匹配状态。",
+        "company_standard.verification_status"
+      ],
+      [
+        "child_company_codes",
+        "JSON",
+        "可空。直接子公司及分公司的业务编号数组，成员对应本表 company_code，不含递归下级。按本文约定，无关系及未确认均保存 JSON 数字 0。",
+        "company_standard_display.子公司；以公司ID 对应 company_standard.id。"
+      ],
+      [
+        "parent_company_codes",
+        "JSON",
+        "可空。直接母公司及总公司的业务编号数组，成员对应本表 company_code，不含递归上级。按本文约定，无关系及未确认均保存 JSON 数字 0。",
+        "company_standard_display.母公司；以公司ID 对应 company_standard.id。"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "必填。来源记录首次创建时间，用于保留来源生命周期；统一转换为 UTC，与目标导入时间区分。",
+        "对应来源表.created_at；时区转换后写入。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "必填。来源记录最近更新时间，用于核对同步版本；标准实体使用来源时间，不用导入时间替代。",
+        "对应来源表.updated_at；时区转换后写入。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "必填。该行最近一次被同步批次写入或确认的批次号，外键关联 graph_sync_batch.id；不是来源处理批号。",
+        "MySQL graph_sync_batch.id；同步程序填写，无同名来源列。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "必填。该行最近一次在 MySQL 写入或同步确认的时间，统一使用 UTC；与 source_updated_at 含义不同。",
+        "同步程序生成，无对应 Supabase 字段。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "可空。目标端标记逻辑删除的 UTC 时间。",
+        "同步程序在标记删除时生成，无对应来源时间列。"
+      ]
+    ],
+    "graph_school_entity": [
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "school_standard.id"
+      ],
+      [
+        "school_code",
+        "VARCHAR(64)",
+        "必填。学校业务编号，本表内唯一，用于展示和按编号查询；与 ID 主键、官方标识码分别保存。",
+        "school_standard.school_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化学校名称，用于展示和检索；允许更名和同名，不设置唯一约束，不据此合并实体。",
+        "school_standard.standard_name"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "可空。学校已有历史名称，保存为 JSON 字符串数组；只保存来源已有名称，不补充推测的曾用名。",
+        "school_standard.former_names；PostgreSQL text[] 转为 JSON 数组。"
+      ],
+      [
+        "official_code",
+        "VARCHAR(64)",
+        "可空。来源已有的学校官方标识码，按字符串保存，保留前导零；缺失时为空，不设置唯一约束，不替代 school_code。",
+        "school_standard.official_code"
+      ],
+      [
+        "country_region",
+        "VARCHAR(128)",
+        "可空。学校所在国家或地区，直接保留来源文本；缺失时为空，不根据人物国籍或其他经历推断。",
+        "school_standard.country_region"
+      ],
+      [
+        "city",
+        "VARCHAR(128)",
+        "可空。学校所在城市，直接保留来源文本；缺失时为空，不作为学校实体的独立识别键。",
+        "school_standard.city"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。学校实体核验状态，保留来源原值；描述标准实体本身，与某条教育经历是否成功匹配分别判断。",
+        "school_standard.verification_status"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "必填。来源记录首次创建时间，用于保留来源生命周期；统一转换为 UTC，与目标导入时间区分。",
+        "对应来源表.created_at；时区转换后写入。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "必填。来源记录最近更新时间，用于核对同步版本；标准实体使用来源时间，不用导入时间替代。",
+        "对应来源表.updated_at；时区转换后写入。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "必填。该行最近一次被同步批次写入或确认的批次号，外键关联 graph_sync_batch.id；不是来源处理批号。",
+        "MySQL graph_sync_batch.id；同步程序填写，无同名来源列。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "必填。该行最近一次在 MySQL 写入或同步确认的时间，统一使用 UTC；与 source_updated_at 含义不同。",
+        "同步程序生成，无对应 Supabase 字段。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "可空。目标端标记逻辑删除的 UTC 时间。",
+        "同步程序在标记删除时生成，无对应来源时间列。"
+      ]
+    ],
+    "graph_major_entity": [
+      [
+        "id",
+        "BIGINT AUTO_INCREMENT PRIMARY KEY",
+        "MySQL 内部主键，首次插入生成，后续同步保持不变；供图边映射关联",
+        "数据库生成自增主键"
+      ],
+      [
+        "uuid",
+        "CHAR(36) NOT NULL UNIQUE",
+        "保留 Supabase 对应标准表的 id，用于同步去重及映射文件关联",
+        "major_standard.id"
+      ],
+      [
+        "major_code",
+        "VARCHAR(64)",
+        "必填。专业业务编号，本表内唯一，用于展示和按编号查询；不是教育主管部门目录代码，也不表示个人学历。",
+        "major_standard.major_code"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "必填。标准化后的专业或学科名称；允许重名和修改，不设置唯一约束，不据此推断个人学位、层次或就读学校。",
+        "major_standard.standard_name"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "必填。专业实体核验状态，保留来源原值；用于实体筛选，不代表某个人已取得该专业的学历或学位。",
+        "major_standard.verification_status"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "必填。来源记录首次创建时间，用于保留来源生命周期；统一转换为 UTC，与目标导入时间区分。",
+        "对应来源表.created_at；时区转换后写入。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "必填。来源记录最近更新时间，用于核对同步版本；标准实体使用来源时间，不用导入时间替代。",
+        "对应来源表.updated_at；时区转换后写入。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "必填。该行最近一次被同步批次写入或确认的批次号，外键关联 graph_sync_batch.id；不是来源处理批号。",
+        "MySQL graph_sync_batch.id；同步程序填写，无同名来源列。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "必填。该行最近一次在 MySQL 写入或同步确认的时间，统一使用 UTC；与 source_updated_at 含义不同。",
+        "同步程序生成，无对应 Supabase 字段。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "可空。目标端标记逻辑删除的 UTC 时间。",
+        "同步程序在标记删除时生成，无对应来源时间列。"
+      ]
+    ],
+    "graph_sync_batch": [
+      [
+        "id",
+        "BIGINT UNSIGNED",
+        "必填。批次主键，MySQL 自增生成；供业务表的 sync_batch_id 引用。",
+        "MySQL AUTO_INCREMENT 生成。"
+      ],
+      [
+        "source_project_id",
+        "VARCHAR(64)",
+        "必填。本批次读取的 Supabase 项目标识，用于区分同步来源。",
+        "同步程序读取来源项目配置。"
+      ],
+      [
+        "sync_mode",
+        "VARCHAR(16)",
+        "必填。同步模式：full 为全量，incremental 为增量。",
+        "同步程序填写本次运行模式。"
+      ],
+      [
+        "status",
+        "VARCHAR(16)",
+        "必填。批次当前状态：running、validated、succeeded、failed，含义见约束说明。",
+        "同步程序维护执行状态。"
+      ],
+      [
+        "started_at",
+        "DATETIME(6)",
+        "必填。批次开始的 UTC 时间，保留微秒精度，用于排序及耗时统计。",
+        "同步程序在批次开始时生成。"
+      ],
+      [
+        "snapshot_at",
+        "DATETIME(6)",
+        "可空。来源一致快照或明确截止时间，使用 UTC；未知时为空。",
+        "同步程序记录来源读取边界。"
+      ],
+      [
+        "finished_at",
+        "DATETIME(6)",
+        "可空。批次成功或失败结束的 UTC 时间；运行期间为空。",
+        "同步程序在批次结束时生成。"
+      ],
+      [
+        "expected_counts",
+        "JSON",
+        "可空。按目标表名保存本批次预期数量的 JSON 对象，用于数量校验。",
+        "同步程序根据本批次导出结果统计。"
+      ],
+      [
+        "actual_counts",
+        "JSON",
+        "可空。本批次实际写入或确认数量，按表名保存 JSON；不是全表总量。",
+        "同步程序统计 MySQL 本批次结果。"
+      ],
+      [
+        "error_message",
+        "TEXT",
+        "可空。失败原因摘要；正常批次可为空，不保存凭证或完整连接串。",
+        "同步程序记录批次错误。"
+      ]
+    ],
+    "graph_edge_mapping": [
+      [
+        "id",
+        "BIGINT",
+        "主键，并作为 NebulaGraph Rank；正数且不超过 2^63−1。首次分配后沿用。",
+        "新建来源字段槽位时分配；"
+      ],
+      [
+        "source_system",
+        "VARCHAR(16)",
+        "取值 expert =专家来源、resume =简历来源。",
+        "枚举值"
+      ],
+      [
+        "source_table",
+        "VARCHAR(64)",
+        "本条经历的真实来源表名，限定为 Expert 与 Resume 两边各三类经历表。experts/resume_project_experience\nexperts/resume_work_experience\nexperts/resume_education_experience",
+        "真实表名"
+      ],
+      [
+        "source_field_id",
+        "BIGINT",
+        "来源经历行的真实主键。不同经历表中的相同数值不代表同一条经历。",
+        "experts/resume_work_experience.id\nexperts/resume_project_experience.id\nexperts/resume_education_experience.id"
+      ],
+      [
+        "source_field",
+        "VARCHAR(64)",
+        "产生该关联的真实来源列名，作为稳定槽位的一部分。当前字段包括 company_name、school_name、major。",
+        "实际命中的来源经历列名"
+      ],
+      [
+        "source_person_id",
+        "BIGINT",
+        "当前所属来源人物的主键。迁移经历时更新归属。",
+        "Expert 的 expert_id；Resume 的 resume_id。"
+      ],
+      [
+        "standard_entity_id",
+        "BIGINT",
+        "MySQL 标准实体表的整数主键，不是 Supabase UUID。根据 edge_type 确定对应实体表。",
+        "graph_company/school/major_entity.id"
+      ],
+      [
+        "edge_type",
+        "VARCHAR(64)",
+        "写入图数据库的边类型名称，表示人物与实体之间的关联含义。详情见下表：来源字段到边类型",
+        "枚举值"
+      ],
+      [
+        "created_at",
+        "DATETIME(6)",
+        "创建时间。",
+        "数据库生成"
+      ],
+      [
+        "updated_at",
+        "DATETIME(6)",
+        "更新时间",
+        "数据库生成"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "删除时间",
+        "数据库生成"
+      ]
+    ]
+  },
+  "mysql_table_count": 5,
+  "mysql_column_count": 58,
+  "previous_sha256": "822c28a5a4b595509bed1c95f75094f2cb100d48620a4b3ea36f66be775650b3",
+  "previous_mysql_column_count": 76,
+  "removed_mysql_tables": [
+    "graph_company_relation",
+    "graph_expert_name_mapping"
+  ],
+  "changes": [
+    {
+      "table": "graph_company_entity",
+      "old_columns": 12,
+      "new_columns": 13,
+      "added": [
+        "uuid"
+      ],
+      "removed": [],
+      "declaration_changes": [
+        {
+          "field": "id",
+          "old": "BIGINT",
+          "new": "BIGINT AUTO_INCREMENT PRIMARY KEY"
+        }
+      ]
+    },
+    {
+      "table": "graph_school_entity",
+      "old_columns": 13,
+      "new_columns": 14,
+      "added": [
+        "uuid"
+      ],
+      "removed": [],
+      "declaration_changes": [
+        {
+          "field": "id",
+          "old": "BIGINT",
+          "new": "BIGINT AUTO_INCREMENT PRIMARY KEY"
+        }
+      ]
+    },
+    {
+      "table": "graph_major_entity",
+      "old_columns": 9,
+      "new_columns": 10,
+      "added": [
+        "uuid"
+      ],
+      "removed": [],
+      "declaration_changes": [
+        {
+          "field": "id",
+          "old": "BIGINT",
+          "new": "BIGINT AUTO_INCREMENT PRIMARY KEY"
+        }
+      ]
+    },
+    {
+      "table": "graph_sync_batch",
+      "old_columns": 10,
+      "new_columns": 10,
+      "added": [],
+      "removed": [],
+      "declaration_changes": []
+    },
+    {
+      "table": "graph_edge_mapping",
+      "old_columns": 11,
+      "new_columns": 11,
+      "added": [],
+      "removed": [],
+      "declaration_changes": []
+    }
+  ],
+  "application_probes": [
+    {
+      "case": "existing_numeric_baseline",
+      "result": "passed",
+      "nodes": 6,
+      "facts": 6
+    },
+    {
+      "case": "remove_mysql_name_mapping_table",
+      "result": "blocked by current application",
+      "code": "INVALID_CONTRACT"
+    },
+    {
+      "case": "two_valid_targets_for_one_slot",
+      "result": "blocked by current application",
+      "code": "NAME_MAPPING_MISMATCH"
+    },
+    {
+      "case": "duplicate_slot_rejected_explicitly",
+      "result": "blocked by current application",
+      "code": "DUPLICATE_SLOT"
+    },
+    {
+      "case": "entity_uuid_extra_field",
+      "result": "ignored by current numeric adapter",
+      "note": "No UUID-to-integer file lookup is performed"
+    },
+    {
+      "case": "mapping_file_change_without_sql_events",
+      "result": "no new batch",
+      "sql_to_seq": 0,
+      "reference_month": 202611,
+      "graph_backend": "test-double",
+      "native_graph_executed": false
+    }
+  ],
+  "mechanism_probes": [
+    {
+      "case": "UUID_lookup_to_mysql_integer",
+      "passed": true
+    },
+    {
+      "case": "same_numeric_id_in_separate_types",
+      "passed": true
+    },
+    {
+      "case": "string_key_above_javascript_exact_integer_range",
+      "passed": true
+    },
+    {
+      "case": "duplicate_key",
+      "passed": true,
+      "rejection": "DUPLICATE_JSON_KEY"
+    },
+    {
+      "case": "raw_name_changed",
+      "passed": true,
+      "rejection": "RAW_NAME_MISMATCH"
+    },
+    {
+      "case": "unknown_uuid",
+      "passed": true,
+      "rejection": "UNKNOWN_UUID"
+    },
+    {
+      "case": "deleted_entity",
+      "passed": true,
+      "rejection": "DELETED_ENTITY"
+    },
+    {
+      "case": "noncanonical_key",
+      "passed": true,
+      "rejection": "INVALID_SOURCE_KEY"
+    },
+    {
+      "case": "multiple_UUIDs_resolve_to_two_targets",
+      "passed": true,
+      "scope": "lookup only; no Rank allocation or experience attribution"
+    },
+    {
+      "case": "default_json_decoder_keeps_last_duplicate",
+      "passed": true,
+      "scope": "demonstrates need for explicit duplicate detection"
+    }
+  ],
+  "probe_scope": "Local synthetic data. Temporary resolver examples are not application support.",
+  "external_database_access": false,
+  "mysql_access": false,
+  "temporary_sqlite_state_used": true,
+  "native_graph_executed": false,
+  "source_docx_modified": false,
+  "application_source_modified": false,
+  "regression_validation": {
+    "date": "2026-11-10",
+    "command": "backend/.venv/bin/python -m pytest backend/tests/test_update_program.py -q",
+    "passed": 54,
+    "warnings": 1,
+    "warning": "Existing Starlette TestClient httpx deprecation",
+    "scope": "Existing updater regression only. Does not validate a new mapping-file adapter or MySQL-to-query-API integration."
+  }
+}

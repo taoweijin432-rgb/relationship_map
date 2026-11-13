@@ -1,0 +1,22 @@
+{
+  "format_version": 1,
+  "block_size": 128,
+  "status": "ready",
+  "space": "relationship_lab_projection_1856d2337202",
+  "projection_id": "relationship_lab_projection_1856d2337202",
+  "data_version": "handoff-trial-v1-6b6c65181748",
+  "reference_month": 202611,
+  "source_digest": "08b5c9cfa776c1b863e8f1cdbff3d1eb31875603cf86bf13cee82447efc3c576",
+  "counts": {
+    "people": 60,
+    "facts": 122,
+    "sources": 64,
+    "entities": 17,
+    "blocks": 11,
+    "memberships": 118,
+    "experience_edges": 122,
+    "auxiliary_edges": 236,
+    "write_statements": 39
+  },
+  "elapsed_ms": 23455.56
+}

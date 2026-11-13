@@ -1,0 +1,416 @@
+{
+  "version": "handoff-example-v1",
+  "reference_month": 202611,
+  "people": [
+    {
+      "id": "p:01",
+      "name": "林知远",
+      "city": "北京",
+      "headline": "星澜科技 · 技术总监",
+      "sources": ["expert"]
+    },
+    {
+      "id": "p:02",
+      "name": "周明澈",
+      "city": "杭州",
+      "headline": "曾任星澜科技 · 算法工程师",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:03",
+      "name": "陈予安",
+      "city": "上海",
+      "headline": "曾任星澜科技 · 产品经理",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:04",
+      "name": "陆思宁",
+      "city": "上海",
+      "headline": "星澜科技 · 算法工程师",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:05",
+      "name": "许清和",
+      "city": "北京",
+      "headline": "星澜科技 · 解决方案专家",
+      "sources": ["expert"]
+    },
+    {
+      "id": "p:06",
+      "name": "顾若溪",
+      "city": "深圳",
+      "headline": "远川智能 · 技术总监",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:07",
+      "name": "林知远",
+      "city": "杭州",
+      "headline": "曾任远川智能 · 算法工程师",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:08",
+      "name": "苏书言",
+      "city": "北京",
+      "headline": "曾任星澜科技 · 技术总监",
+      "sources": ["expert", "resume"]
+    },
+    {
+      "id": "p:09",
+      "name": "叶星野",
+      "city": "北京",
+      "headline": "失效人物样例",
+      "sources": ["expert"],
+      "active": false
+    },
+    {
+      "id": "p:10",
+      "name": "沈清和",
+      "city": "上海",
+      "headline": "仅有失效工作经历",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:11",
+      "name": "程亦舟",
+      "city": "深圳",
+      "headline": "曾任星澜科技 · 研究员",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:12",
+      "name": "方若溪",
+      "city": "杭州",
+      "headline": "曾任星澜科技 · 研究员",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:13",
+      "name": "陆明澈",
+      "city": "上海",
+      "headline": "曾任远川智能 · 算法工程师",
+      "sources": ["resume"]
+    },
+    {
+      "id": "p:14",
+      "name": "许书言",
+      "city": "北京",
+      "headline": "远川智能 · 算法工程师",
+      "sources": ["resume"]
+    }
+  ],
+  "entities": [
+    {
+      "id": "org:a",
+      "type": "organization",
+      "name": "星澜科技",
+      "aliases": ["星澜科技有限公司", "星澜"]
+    },
+    {
+      "id": "org:b",
+      "type": "organization",
+      "name": "远川智能",
+      "aliases": ["远川智能有限公司", "远川"]
+    },
+    {
+      "id": "school:x",
+      "type": "school",
+      "name": "江城大学",
+      "aliases": ["江大"]
+    },
+    { "id": "school:y", "type": "school", "name": "海岳大学" },
+    { "id": "school:z", "type": "school", "name": "南洲理工大学" },
+    { "id": "role:director", "type": "role", "name": "技术总监" },
+    { "id": "role:engineer", "type": "role", "name": "算法工程师" },
+    { "id": "role:manager", "type": "role", "name": "产品经理" },
+    { "id": "role:researcher", "type": "role", "name": "研究员" },
+    { "id": "role:expert", "type": "role", "name": "解决方案专家" }
+  ],
+  "facts": [
+    {
+      "id": "f:01a",
+      "person_id": "p:01",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:director",
+      "start_month": 202001,
+      "end_month": 202212,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-work-01a"
+    },
+    {
+      "id": "f:01b",
+      "person_id": "p:01",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:director",
+      "start_month": 202401,
+      "is_current": true,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-work-01b"
+    },
+    {
+      "id": "f:01s",
+      "person_id": "p:01",
+      "type": "education",
+      "entity_id": "school:x",
+      "source_system": "expert",
+      "source_record_id": "demo-expert-school-01"
+    },
+    {
+      "id": "f:02a",
+      "person_id": "p:02",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:engineer",
+      "start_month": 202101,
+      "end_month": 202212,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-02"
+    },
+    {
+      "id": "f:02s",
+      "person_id": "p:02",
+      "type": "education",
+      "entity_id": "school:x",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-02"
+    },
+    {
+      "id": "f:03a",
+      "person_id": "p:03",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:manager",
+      "start_month": 201001,
+      "end_month": 201512,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-03"
+    },
+    {
+      "id": "f:03s",
+      "person_id": "p:03",
+      "type": "education",
+      "entity_id": "school:y",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-03"
+    },
+    {
+      "id": "f:04a",
+      "person_id": "p:04",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:engineer",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-04"
+    },
+    {
+      "id": "f:04s",
+      "person_id": "p:04",
+      "type": "education",
+      "entity_id": "school:x",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-04"
+    },
+    {
+      "id": "f:05a",
+      "person_id": "p:05",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:expert",
+      "start_month": 202211,
+      "is_current": true,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-work-05"
+    },
+    {
+      "id": "f:05s",
+      "person_id": "p:05",
+      "type": "education",
+      "entity_id": "school:x",
+      "start_month": 201401,
+      "end_month": 201806,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-school-05"
+    },
+    {
+      "id": "f:06a",
+      "person_id": "p:06",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:researcher",
+      "start_month": 202001,
+      "end_month": 202112,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-06a"
+    },
+    {
+      "id": "f:06b",
+      "person_id": "p:06",
+      "type": "employment",
+      "entity_id": "org:b",
+      "role_id": "role:director",
+      "start_month": 202201,
+      "is_current": true,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-06b"
+    },
+    {
+      "id": "f:06s",
+      "person_id": "p:06",
+      "type": "education",
+      "entity_id": "school:y",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-06"
+    },
+    {
+      "id": "f:07a",
+      "person_id": "p:07",
+      "type": "employment",
+      "entity_id": "org:b",
+      "role_id": "role:engineer",
+      "start_month": 202001,
+      "end_month": 202212,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-07"
+    },
+    {
+      "id": "f:07s",
+      "person_id": "p:07",
+      "type": "education",
+      "entity_id": "school:y",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-07"
+    },
+    {
+      "id": "f:08a",
+      "person_id": "p:08",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:director",
+      "start_month": 202001,
+      "end_month": 202112,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-work-08"
+    },
+    {
+      "id": "f:08b",
+      "person_id": "p:08",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:director",
+      "start_month": 202001,
+      "end_month": 202112,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-08"
+    },
+    {
+      "id": "f:08s",
+      "person_id": "p:08",
+      "type": "education",
+      "entity_id": "school:y",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-08"
+    },
+    {
+      "id": "f:09a",
+      "person_id": "p:09",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:director",
+      "start_month": 202001,
+      "end_month": 202212,
+      "source_system": "expert",
+      "source_record_id": "demo-expert-work-09"
+    },
+    {
+      "id": "f:10a",
+      "person_id": "p:10",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:engineer",
+      "start_month": 202101,
+      "end_month": 202212,
+      "active": false,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-10"
+    },
+    {
+      "id": "f:11a",
+      "person_id": "p:11",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:researcher",
+      "start_month": 202312,
+      "end_month": 202401,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-11"
+    },
+    {
+      "id": "f:11s",
+      "person_id": "p:11",
+      "type": "education",
+      "entity_id": "school:x",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-11"
+    },
+    {
+      "id": "f:12a",
+      "person_id": "p:12",
+      "type": "employment",
+      "entity_id": "org:a",
+      "role_id": "role:researcher",
+      "start_month": 202112,
+      "end_month": 202112,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-12"
+    },
+    {
+      "id": "f:12s",
+      "person_id": "p:12",
+      "type": "education",
+      "entity_id": "school:z",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-12"
+    },
+    {
+      "id": "f:13a",
+      "person_id": "p:13",
+      "type": "employment",
+      "entity_id": "org:b",
+      "role_id": "role:engineer",
+      "end_month": 202006,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-13"
+    },
+    {
+      "id": "f:13s",
+      "person_id": "p:13",
+      "type": "education",
+      "entity_id": "school:x",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-13"
+    },
+    {
+      "id": "f:14a",
+      "person_id": "p:14",
+      "type": "employment",
+      "entity_id": "org:b",
+      "role_id": "role:engineer",
+      "start_month": 202001,
+      "source_system": "resume",
+      "source_record_id": "demo-resume-work-14"
+    },
+    {
+      "id": "f:14s",
+      "person_id": "p:14",
+      "type": "education",
+      "entity_id": "school:y",
+      "source_system": "resume",
+      "source_record_id": "demo-resume-school-14"
+    }
+  ]
+}

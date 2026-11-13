@@ -1,0 +1,1054 @@
+{
+  "review_date": "2026-11-06",
+  "document": "/Users/yuka/Documents/人物关系图谱MySQL表结构设计说明_映射表精简版(3).docx",
+  "sha256": "e96f2a54db67d5a541f8116841f3a1de37b4dbc336ce4981d4f4454970e3c030",
+  "scope": "Sole source for field specification v4.0; no external DDL or implementation used",
+  "table_count": 11,
+  "source_table_field_counts": {
+    "graph_company_entity": 13,
+    "graph_school_entity": 14,
+    "graph_major_entity": 10,
+    "graph_name_mapping": 12,
+    "graph_company_relation": 11,
+    "graph_sync_batch": 10,
+    "graph_edge_mapping": 11
+  },
+  "field_definitions": {
+    "graph_company_entity": [
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "company_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "是",
+        "历史名称，使用 JSON 数组保存。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ],
+      [
+        "child_company_codes",
+        "JSON",
+        "是",
+        "子公司及分公司的编号；JSON 数组、数字 0 或 SQL NULL。"
+      ],
+      [
+        "parent_company_codes",
+        "JSON",
+        "是",
+        "母公司及总公司的编号；JSON 数组、数字 0 或 SQL NULL。"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录创建时间，统一保存为 UTC。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "是",
+        "标记删除的时间，未删除时可为空。"
+      ]
+    ],
+    "graph_school_entity": [
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "school_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "是",
+        "历史名称，使用 JSON 数组保存。"
+      ],
+      [
+        "official_code",
+        "VARCHAR(64)",
+        "是",
+        "官方标识码；不设置唯一约束。"
+      ],
+      [
+        "country_region",
+        "VARCHAR(128)",
+        "是",
+        "国家或地区。"
+      ],
+      [
+        "city",
+        "VARCHAR(128)",
+        "是",
+        "城市。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录创建时间，统一保存为 UTC。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "是",
+        "标记删除的时间，未删除时可为空。"
+      ]
+    ],
+    "graph_major_entity": [
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "major_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录创建时间，统一保存为 UTC。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "是",
+        "标记删除的时间，未删除时可为空。"
+      ]
+    ],
+    "graph_name_mapping": [
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "entity_type",
+        "VARCHAR(16)",
+        "否",
+        "实体类型，取值为 company、school 或 major。"
+      ],
+      [
+        "source_namespace",
+        "VARCHAR(128)",
+        "否",
+        "来源命名空间，用于区分工作履历与教育履历。"
+      ],
+      [
+        "source_field_id",
+        "VARCHAR(128)",
+        "否",
+        "原始履历记录 ID，保留字符串形式；不是人物 ID。"
+      ],
+      [
+        "company_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_company_entity.id。"
+      ],
+      [
+        "school_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_school_entity.id。"
+      ],
+      [
+        "major_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_major_entity.id。"
+      ],
+      [
+        "processing_status",
+        "VARCHAR(64)",
+        "否",
+        "匹配处理状态，具体取值见本表约束。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ]
+    ],
+    "graph_company_relation": [
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "parent_company_id",
+        "CHAR(36)",
+        "否",
+        "母公司或总公司 UUID，关联 graph_company.id。"
+      ],
+      [
+        "child_company_id",
+        "CHAR(36)",
+        "否",
+        "子公司或分公司 UUID，关联 graph_company.id。"
+      ],
+      [
+        "relation_type",
+        "VARCHAR(32)",
+        "否",
+        "关系类型，取值为子公司或分公司。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录创建时间，统一保存为 UTC。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "是",
+        "标记删除的时间，未删除时可为空。"
+      ]
+    ],
+    "graph_sync_batch": [
+      [
+        "id",
+        "BIGINT UNSIGNED",
+        "否",
+        "批次主键，自增生成。"
+      ],
+      [
+        "source_project_id",
+        "VARCHAR(64)",
+        "否",
+        "来源 Supabase 项目标识。"
+      ],
+      [
+        "sync_mode",
+        "VARCHAR(16)",
+        "否",
+        "同步模式，取值为 full 或 incremental。"
+      ],
+      [
+        "status",
+        "VARCHAR(16)",
+        "否",
+        "批次状态，取值见本表约束。"
+      ],
+      [
+        "started_at",
+        "DATETIME(6)",
+        "否",
+        "批次开始时间，UTC。"
+      ],
+      [
+        "snapshot_at",
+        "DATETIME(6)",
+        "是",
+        "来源数据快照时间，UTC，可空。"
+      ],
+      [
+        "finished_at",
+        "DATETIME(6)",
+        "是",
+        "批次结束时间，UTC，可空。"
+      ],
+      [
+        "expected_counts",
+        "JSON",
+        "是",
+        "按表记录的预期数量，使用 JSON 保存。"
+      ],
+      [
+        "actual_counts",
+        "JSON",
+        "是",
+        "按表记录的实际数量，使用 JSON 保存。"
+      ],
+      [
+        "error_message",
+        "TEXT",
+        "是",
+        "批次错误信息，可空。"
+      ]
+    ],
+    "graph_edge_mapping": [
+      [
+        "id",
+        "BIGINT",
+        "主键，并作为 NebulaGraph Rank；正数且不超过 2^63−1。首次分配后沿用。",
+        "新建来源字段槽位时分配；"
+      ],
+      [
+        "source_system",
+        "VARCHAR(16)",
+        "取值 expert =专家来源、resume =简历来源。",
+        "枚举值"
+      ],
+      [
+        "source_table",
+        "VARCHAR(64)",
+        "本条经历的真实来源表名，限定为 Expert 与 Resume 两边各三类经历表。experts/resume_project_experience\nexperts/resume_work_expertience\nexperts/resume_education_experience",
+        "真实表名"
+      ],
+      [
+        "source_field_id",
+        "BIGINT",
+        "来源经历行的真实主键。不同经历表中的相同数值不代表同一条经历。",
+        "experts/resume_work_experience.id\nexperts/resume_project_experience.id\nexperts/resume_education_experience.id"
+      ],
+      [
+        "source_field",
+        "VARCHAR(64)",
+        "产生该关联的真实来源列名，作为稳定槽位的一部分。当前字段包括 company_name、school_name、major。",
+        "实际命中的来源经历列名"
+      ],
+      [
+        "source_person_id",
+        "BIGINT",
+        "当前所属来源人物的主键。迁移经历时更新归属。",
+        "Expert 的 expert_id；Resume 的 resume_id。"
+      ],
+      [
+        "standard_entity_id",
+        "CHAR(36)",
+        "当前期望匹配的有效实体 ID；graph_conpany/school/major_entity表的主键",
+        "graph_conpany/school/major_entity.id"
+      ],
+      [
+        "edge_type",
+        "VARCHAR(64)",
+        "写入图数据库的边类型名称，表示人物与实体之间的关联含义。详情见下表：来源字段到边类型",
+        "枚举值"
+      ],
+      [
+        "created_at",
+        "DATETIME(6)",
+        "创建时间。",
+        "数据库生成"
+      ],
+      [
+        "updated_at",
+        "DATETIME(6)",
+        "更新时间",
+        "数据库生成"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "删除时间",
+        "数据库生成"
+      ]
+    ]
+  },
+  "document_tables": [
+    [
+      [
+        "表名",
+        "名称",
+        "主要内容"
+      ],
+      [
+        "graph_company",
+        "公司标准实体",
+        "公司标识、标准名称、历史名称及直接上下级编号"
+      ],
+      [
+        "graph_school",
+        "学校标准实体",
+        "学校标识、名称及官方标识码"
+      ],
+      [
+        "graph_major",
+        "专业标准实体",
+        "专业标识、标准名称及核验状态"
+      ],
+      [
+        "graph_name_mapping",
+        "来源名称映射",
+        "原始履历记录与标准实体的对应关系"
+      ],
+      [
+        "graph_company_relation",
+        "公司上下级关系",
+        "母子公司与总分公司之间的关系"
+      ],
+      [
+        "graph_sync_batch",
+        "同步批次",
+        "批次标识、状态与数量记录"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "source_created_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录创建时间，统一保存为 UTC。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "是",
+        "标记删除的时间，未删除时可为空。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "company_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "是",
+        "历史名称，使用 JSON 数组保存。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ],
+      [
+        "child_company_codes",
+        "JSON",
+        "是",
+        "子公司及分公司的编号；JSON 数组、数字 0 或 SQL NULL。"
+      ],
+      [
+        "parent_company_codes",
+        "JSON",
+        "是",
+        "母公司及总公司的编号；JSON 数组、数字 0 或 SQL NULL。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "school_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "former_names",
+        "JSON",
+        "是",
+        "历史名称，使用 JSON 数组保存。"
+      ],
+      [
+        "official_code",
+        "VARCHAR(64)",
+        "是",
+        "官方标识码；不设置唯一约束。"
+      ],
+      [
+        "country_region",
+        "VARCHAR(128)",
+        "是",
+        "国家或地区。"
+      ],
+      [
+        "city",
+        "VARCHAR(128)",
+        "是",
+        "城市。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "major_code",
+        "VARCHAR(64)",
+        "否",
+        "标准实体编号，设置唯一约束。"
+      ],
+      [
+        "standard_name",
+        "VARCHAR(255)",
+        "否",
+        "标准名称；允许修改，不设置唯一约束。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "entity_type",
+        "VARCHAR(16)",
+        "否",
+        "实体类型，取值为 company、school 或 major。"
+      ],
+      [
+        "source_namespace",
+        "VARCHAR(128)",
+        "否",
+        "来源命名空间，用于区分工作履历与教育履历。"
+      ],
+      [
+        "source_field_id",
+        "VARCHAR(128)",
+        "否",
+        "原始履历记录 ID，保留字符串形式；不是人物 ID。"
+      ],
+      [
+        "company_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_company_entity.id。"
+      ],
+      [
+        "school_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_school_entity.id。"
+      ],
+      [
+        "major_id",
+        "CHAR(36)",
+        "是",
+        "关联 graph_major_entity.id。"
+      ],
+      [
+        "processing_status",
+        "VARCHAR(64)",
+        "否",
+        "匹配处理状态，具体取值见本表约束。"
+      ],
+      [
+        "source_updated_at",
+        "DATETIME(6)",
+        "否",
+        "来源记录更新时间，统一保存为 UTC。"
+      ],
+      [
+        "sync_batch_id",
+        "BIGINT UNSIGNED",
+        "否",
+        "最近一次同步批次，关联 graph_sync_batch.id。"
+      ],
+      [
+        "synced_at",
+        "DATETIME(6)",
+        "否",
+        "目标端写入时间，统一保存为 UTC。"
+      ],
+      [
+        "is_deleted",
+        "TINYINT UNSIGNED",
+        "否",
+        "删除标记；默认 0，取值仅限 0 或 1。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "CHAR(36)",
+        "否",
+        "记录主键；业务表保留来源 UUID。"
+      ],
+      [
+        "parent_company_id",
+        "CHAR(36)",
+        "否",
+        "母公司或总公司 UUID，关联 graph_company.id。"
+      ],
+      [
+        "child_company_id",
+        "CHAR(36)",
+        "否",
+        "子公司或分公司 UUID，关联 graph_company.id。"
+      ],
+      [
+        "relation_type",
+        "VARCHAR(32)",
+        "否",
+        "关系类型，取值为子公司或分公司。"
+      ],
+      [
+        "verification_status",
+        "VARCHAR(64)",
+        "否",
+        "来源核验状态，保留原值。"
+      ]
+    ],
+    [
+      [
+        "字段",
+        "类型",
+        "可空",
+        "设计说明"
+      ],
+      [
+        "id",
+        "BIGINT UNSIGNED",
+        "否",
+        "批次主键，自增生成。"
+      ],
+      [
+        "source_project_id",
+        "VARCHAR(64)",
+        "否",
+        "来源 Supabase 项目标识。"
+      ],
+      [
+        "sync_mode",
+        "VARCHAR(16)",
+        "否",
+        "同步模式，取值为 full 或 incremental。"
+      ],
+      [
+        "status",
+        "VARCHAR(16)",
+        "否",
+        "批次状态，取值见本表约束。"
+      ],
+      [
+        "started_at",
+        "DATETIME(6)",
+        "否",
+        "批次开始时间，UTC。"
+      ],
+      [
+        "snapshot_at",
+        "DATETIME(6)",
+        "是",
+        "来源数据快照时间，UTC，可空。"
+      ],
+      [
+        "finished_at",
+        "DATETIME(6)",
+        "是",
+        "批次结束时间，UTC，可空。"
+      ],
+      [
+        "expected_counts",
+        "JSON",
+        "是",
+        "按表记录的预期数量，使用 JSON 保存。"
+      ],
+      [
+        "actual_counts",
+        "JSON",
+        "是",
+        "按表记录的实际数量，使用 JSON 保存。"
+      ],
+      [
+        "error_message",
+        "TEXT",
+        "是",
+        "批次错误信息，可空。"
+      ]
+    ],
+    [
+      [
+        "字段名",
+        "数据类型",
+        "字段描述",
+        "来源映射"
+      ],
+      [
+        "id",
+        "BIGINT",
+        "主键，并作为 NebulaGraph Rank；正数且不超过 2^63−1。首次分配后沿用。",
+        "新建来源字段槽位时分配；"
+      ],
+      [
+        "source_system",
+        "VARCHAR(16)",
+        "取值 expert =专家来源、resume =简历来源。",
+        "枚举值"
+      ],
+      [
+        "source_table",
+        "VARCHAR(64)",
+        "本条经历的真实来源表名，限定为 Expert 与 Resume 两边各三类经历表。experts/resume_project_experience\nexperts/resume_work_expertience\nexperts/resume_education_experience",
+        "真实表名"
+      ],
+      [
+        "source_field_id",
+        "BIGINT",
+        "来源经历行的真实主键。不同经历表中的相同数值不代表同一条经历。",
+        "experts/resume_work_experience.id\nexperts/resume_project_experience.id\nexperts/resume_education_experience.id"
+      ],
+      [
+        "source_field",
+        "VARCHAR(64)",
+        "产生该关联的真实来源列名，作为稳定槽位的一部分。当前字段包括 company_name、school_name、major。",
+        "实际命中的来源经历列名"
+      ],
+      [
+        "source_person_id",
+        "BIGINT",
+        "当前所属来源人物的主键。迁移经历时更新归属。",
+        "Expert 的 expert_id；Resume 的 resume_id。"
+      ],
+      [
+        "standard_entity_id",
+        "CHAR(36)",
+        "当前期望匹配的有效实体 ID；graph_conpany/school/major_entity表的主键",
+        "graph_conpany/school/major_entity.id"
+      ],
+      [
+        "edge_type",
+        "VARCHAR(64)",
+        "写入图数据库的边类型名称，表示人物与实体之间的关联含义。详情见下表：来源字段到边类型",
+        "枚举值"
+      ],
+      [
+        "created_at",
+        "DATETIME(6)",
+        "创建时间。",
+        "数据库生成"
+      ],
+      [
+        "updated_at",
+        "DATETIME(6)",
+        "更新时间",
+        "数据库生成"
+      ],
+      [
+        "deleted_at",
+        "DATETIME(6)",
+        "删除时间",
+        "数据库生成"
+      ]
+    ],
+    [
+      [
+        "图中对象",
+        "读取位置",
+        "写入规则"
+      ],
+      [
+        "人物节点",
+        "原始人物表",
+        "由来源和人物主键生成 VID；详情仍读源表"
+      ],
+      [
+        "实体节点",
+        "graph_conpany/school/major表",
+        "VID 为 e:<standard_entity_id>，类型和名称来自词典"
+      ],
+      [
+        "人物实体边",
+        "源经历与词典匹配结果",
+        "Rank 为 graph_edge_mapping.id，日期和证据定位来自源经历"
+      ],
+      [
+        "人物之间关系",
+        "查询时计算",
+        "共同实体产生候选，再回源判断时间、角色和证据"
+      ]
+    ],
+    [
+      [
+        "来源字段含义",
+        "关联角色",
+        "图边类型edge_type"
+      ],
+      [
+        "工作经历表.company_name",
+        "employer 任职组织",
+        "worked_at"
+      ],
+      [
+        "教育经历表.school_name",
+        "school 就读学校",
+        "studied_at"
+      ],
+      [
+        "教育经历表.major",
+        "major 所学专业",
+        "studied_major"
+      ]
+    ]
+  ],
+  "limitations": [
+    "Original person and experience DDL is absent from this source",
+    "Graph physical tags and full property schema are not defined",
+    "Source contains inconsistent table and field references"
+  ],
+  "database_access": false
+}

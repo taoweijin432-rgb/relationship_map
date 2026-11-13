@@ -1,0 +1,307 @@
+{
+  "date": "2026-11-10",
+  "architecture": "v0.35",
+  "scope": "isolated fictional MySQL 8.4.13 binlog to SQLite state and native NebulaGraph 3.8.0",
+  "final_run": "data/mysql-update-latest/run-v3-final",
+  "report_sha256": "b3b03574c63fe907689c3bf5dd8a55e6c743e5a84977cb79d88687a390ba806b",
+  "source_document_sha256": "eafd2c32b398ab4a09d26b2b2e90df3d1d78ad8ca874593dd82eddfd358d4b1d",
+  "native_validation": {
+    "all_columns": 228,
+    "code_sha256": {
+      "backend/src/relationship_query/update/mysql_source.py": "4894be3f654c26d9fce5d706909d08d4911000d96d299861bd3f0d6f7dc99580",
+      "backend/src/relationship_query/update/projection.py": "8d819c144d963ff1fe5843ea078287b00327d03726759905983ff45a86ec5a3d",
+      "infra/mysql/schema/file-mapping-v1.sql": "8d30ea7f77d65e69647fee0039990d81a1069c2044cbbfcc7e82c630ee0890dd",
+      "scripts/mysql_update_dataset.py": "8010589a90bc22bfaf65dca500dec7bf779ade148b2847a5d6dd6baa1dc2354f",
+      "scripts/mysql_update_lab.py": "9655daa40d0fb5dfd1312314a3998e6a9e31a0ccfc7dd42474b7e5181e2c7b31"
+    },
+    "concurrent_capture_verified": true,
+    "container_reclaimed": true,
+    "dataset_version": "fictional-balanced-careers-v2",
+    "distribution": {
+      "companies": 101,
+      "facts": 1055,
+      "majors": 54,
+      "max_people_per_company": 7,
+      "people": 262,
+      "relation_evidence": {
+        "company_overlap": 916,
+        "same_company": 1178,
+        "same_major": 1300,
+        "same_school": 605
+      },
+      "schools": 78
+    },
+    "graph_cleanup": {
+      "accounts_reclaimed": 5,
+      "active_retired": true,
+      "spaces_reclaimed": 5
+    },
+    "initial_handoff": {
+      "cdc_delivered_concurrent_commit": true,
+      "snapshot_kept_old_row": true
+    },
+    "latest_columns": 58,
+    "mode": "fictional-native-mysql-binlog-and-nebula",
+    "mysql_version": "8.4.13",
+    "old_graph_unchanged": true,
+    "passed": true,
+    "real_binlog": true,
+    "source_database": "relationship_lab_latest_a188724347b7",
+    "source_write_denied": true,
+    "stages": [
+      {
+        "all_two_hop": {
+          "all_verified": true,
+          "endpoint_pairs": 4681,
+          "middle_triples": 27607,
+          "two_hop_without_direct_pairs": 2809
+        },
+        "captured_seq": 2,
+        "elapsed_seconds": 25.963,
+        "facts": 1055,
+        "local_sql_matches_cutoff": true,
+        "month": 202611,
+        "path_cases": [
+          {
+            "direct": [],
+            "left": "p:expert:1",
+            "middle": [
+              "p:resume:1"
+            ],
+            "name": "公司→公司",
+            "reverse_verified": true,
+            "right": "p:expert:2",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:resume:2",
+            "middle": [
+              "p:expert:3"
+            ],
+            "name": "公司→学校",
+            "reverse_verified": true,
+            "right": "p:resume:3",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:expert:4",
+            "middle": [
+              "p:resume:4"
+            ],
+            "name": "学校→专业",
+            "reverse_verified": true,
+            "right": "p:expert:5",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:resume:5",
+            "middle": [
+              "p:expert:6"
+            ],
+            "name": "专业→公司",
+            "reverse_verified": true,
+            "right": "p:resume:6",
+            "verified": true
+          },
+          {
+            "direct": [
+              "same_company"
+            ],
+            "left": "p:expert:7",
+            "middle": [],
+            "name": "同公司非同期",
+            "reverse_verified": true,
+            "right": "p:resume:7",
+            "verified": true
+          },
+          {
+            "direct": [
+              "same_major",
+              "same_school"
+            ],
+            "left": "p:expert:8",
+            "middle": [],
+            "name": "同校同专业但毕业年代不同",
+            "reverse_verified": true,
+            "right": "p:resume:8",
+            "verified": true
+          },
+          {
+            "direct": [
+              "same_major",
+              "same_school"
+            ],
+            "left": "p:expert:9",
+            "middle": [],
+            "name": "学校与专业来自不同教育行",
+            "reverse_verified": true,
+            "right": "p:resume:9",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:expert:1",
+            "middle": [],
+            "name": "三条边链超出一位中间人范围",
+            "reverse_verified": true,
+            "right": "p:expert:10",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:resume:10",
+            "middle": [],
+            "name": "独立人物无连接",
+            "reverse_verified": true,
+            "right": "p:expert:1",
+            "verified": true
+          },
+          {
+            "direct": [
+              "same_company"
+            ],
+            "left": "p:expert:11",
+            "middle": [],
+            "name": "日期未知仅同公司",
+            "reverse_verified": true,
+            "right": "p:resume:11",
+            "verified": true
+          },
+          {
+            "direct": [],
+            "left": "p:expert:10",
+            "middle": [],
+            "name": "同名公司不同实体",
+            "reverse_verified": true,
+            "right": "p:resume:10",
+            "verified": true
+          }
+        ],
+        "person_names_absent": true,
+        "relation_evidence": {
+          "company_overlap": 916,
+          "same_company": 1178,
+          "same_major": 1300,
+          "same_school": 605
+        },
+        "space": "relationship_lab_sync_2b4010667ba1",
+        "sql_digest": "f6169fd468fb6c651b87e09329e71ddb1faa8f012cd8b25adf7ace0842dd7725",
+        "to_seq": 0
+      },
+      {
+        "all_two_hop": {},
+        "captured_seq": 2,
+        "elapsed_seconds": 29.224,
+        "facts": 1055,
+        "local_sql_matches_cutoff": true,
+        "month": 202611,
+        "path_cases": [],
+        "person_names_absent": true,
+        "relation_evidence": {
+          "company_overlap": 915,
+          "same_company": 1179,
+          "same_major": 1300,
+          "same_school": 605
+        },
+        "space": "relationship_lab_sync_751162771940",
+        "sql_digest": "5950b924dd566b62d79b67b7a06a4ffc011e4900cd6ce752e9fa6b4738fdb6e0",
+        "to_seq": 1
+      },
+      {
+        "all_two_hop": {},
+        "captured_seq": 2,
+        "elapsed_seconds": 30.154,
+        "facts": 1054,
+        "local_sql_matches_cutoff": true,
+        "month": 202611,
+        "path_cases": [],
+        "person_names_absent": true,
+        "relation_evidence": {
+          "company_overlap": 915,
+          "same_company": 1179,
+          "same_major": 1300,
+          "same_school": 604
+        },
+        "space": "relationship_lab_sync_c18e47d83a5d",
+        "sql_digest": "f2615b51b307e3b64694b6802300d99f978e9b38c595398565e4c818047c2022",
+        "to_seq": 2
+      },
+      {
+        "all_two_hop": {},
+        "captured_seq": 3,
+        "elapsed_seconds": 30.144,
+        "facts": 1052,
+        "local_sql_matches_cutoff": true,
+        "month": 202611,
+        "path_cases": [],
+        "person_names_absent": true,
+        "relation_evidence": {
+          "company_overlap": 915,
+          "same_company": 1179,
+          "same_major": 1300,
+          "same_school": 605
+        },
+        "space": "relationship_lab_sync_c16157885062",
+        "sql_digest": "0b97a45c74154b944e67e1ca7187f9c98f3661a36de5ab3766cb52b94d2d425e",
+        "to_seq": 3
+      },
+      {
+        "all_two_hop": {},
+        "captured_seq": 3,
+        "elapsed_seconds": 30.013,
+        "facts": 1052,
+        "local_sql_matches_cutoff": true,
+        "month": 202612,
+        "path_cases": [],
+        "person_names_absent": true,
+        "relation_evidence": {
+          "company_overlap": 915,
+          "same_company": 1179,
+          "same_major": 1300,
+          "same_school": 605
+        },
+        "space": "relationship_lab_sync_a8ceece9b983",
+        "sql_digest": "0b97a45c74154b944e67e1ca7187f9c98f3661a36de5ab3766cb52b94d2d425e",
+        "to_seq": 3
+      }
+    ],
+    "tables": 13
+  },
+  "backend_regression": {
+    "passed": 500,
+    "skipped": 240,
+    "failures": 0,
+    "errors": 0
+  },
+  "update_regression": {
+    "passed": 72,
+    "failures": 0,
+    "errors": 0
+  },
+  "limits": [
+    "fictional DDL concretized from Word field descriptions",
+    "one active target per source field slot",
+    "native graph and existing graph path reader validated, numeric HTTP API and frontend not connected",
+    "bounded file-position binlog reader, unattended scheduling, HA and production capacity remain unvalidated"
+  ],
+  "all_runs_reclaimed": [
+    {
+      "accounts_reclaimed": 5,
+      "active_retired": true,
+      "spaces_reclaimed": 5
+    },
+    {
+      "accounts_reclaimed": 5,
+      "active_retired": true,
+      "spaces_reclaimed": 5
+    },
+    {
+      "accounts_reclaimed": 5,
+      "active_retired": true,
+      "spaces_reclaimed": 5
+    }
+  ]
+}

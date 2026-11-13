@@ -1,0 +1,108 @@
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from time import monotonic
+from typing import Literal
+
+PathLimit = Literal[
+    "candidate_limit",
+    "path_limit",
+    "fact_limit",
+    "pair_limit",
+    "evidence_limit",
+    "time_limit",
+    "sql_limit",
+    "graph_limit",
+]
+
+
+class PathBudgetExceeded(Exception):
+    def __init__(self, reason: PathLimit) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
+    @property
+    def label(self) -> str:
+        return {
+            "time_limit": "执行时间",
+            "graph_limit": "图读取行数或次数",
+            "sql_limit": "SQL执行量",
+            "candidate_limit": "候选人物数量",
+            "path_limit": "路径数量",
+            "fact_limit": "事实数量",
+            "pair_limit": "经历配对数量",
+            "evidence_limit": "证据数量",
+        }.get(self.reason, "查询量")
+
+
+_request_budget: ContextVar["PathBudget | None"] = ContextVar("relation_query_budget", default=None)
+
+
+def relation_query_budget() -> "PathBudget":
+    return _request_budget.get() or PathBudget(5000, 5000)
+
+
+@contextmanager
+def shared_relation_budget() -> Iterator["PathBudget"]:
+    budget = relation_query_budget()
+    token = _request_budget.set(budget)
+    try:
+        yield budget
+    finally:
+        _request_budget.reset(token)
+
+
+class PathBudget:
+    """请求内预算；SQLite 与 Python 循环共同检查，不能用最终 LIMIT 代替执行预算。"""
+
+    def __init__(
+        self,
+        time_ms: int,
+        fact_limit: int,
+        *,
+        clock: Callable[[], float] = monotonic,
+        sql_limit: int = 500_000,
+        pair_limit: int = 50_000,
+    ) -> None:
+        self.clock, self.started = clock, clock()
+        self.deadline = self.started + time_ms / 1000
+        self.fact_limit, self.sql_limit, self.pair_limit = fact_limit, sql_limit, pair_limit
+        self.facts = self.pairs = self.sql_steps = 0
+        self.interrupted: PathLimit | None = None
+        self.graph_rows = self.graph_calls = 0
+        self.graph_candidates = 0
+        self.candidate_reasons: set[PathLimit] = set()
+
+    def graph_request(self, maximum_rows: int) -> None:
+        self.check()
+        if self.graph_calls >= 256 or self.graph_rows + maximum_rows > 20_000:
+            raise PathBudgetExceeded("graph_limit")
+        self.graph_calls += 1
+
+    def graph_result(self, rows: int) -> None:
+        self.graph_rows += rows
+        self.check()
+
+    def check(self) -> None:
+        if self.clock() >= self.deadline:
+            raise PathBudgetExceeded("time_limit")
+
+    def check_pair(self) -> None:
+        self.check()
+        if self.pairs >= self.pair_limit:
+            raise PathBudgetExceeded("pair_limit")
+        self.pairs += 1
+
+    def progress(self) -> int:
+        self.sql_steps += 1000
+        try:
+            self.check()
+            if self.sql_steps >= self.sql_limit:
+                raise PathBudgetExceeded("sql_limit")
+        except PathBudgetExceeded as exc:
+            self.interrupted = exc.reason
+            return 1
+        return 0
+
+    def elapsed_ms(self) -> float:
+        return round((self.clock() - self.started) * 1000, 2)

@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-06",
+  "architecture": "v0.24",
+  "model": "uuid-relations-v5",
+  "data_mode": "mock",
+  "status": "implemented_and_active",
+  "data_version": "uuid-v5-ebfa6f27340364ef46eb-202611",
+  "space": "relationship_lab_uuid_b19a220c6635",
+  "source_database": "relationship_lab_handoff_e7d11a446004",
+  "active_revision": 6,
+  "counts": {
+    "graph_company_entity": 7,
+    "graph_school_entity": 5,
+    "graph_major_entity": 3,
+    "graph_edge_mapping": 182,
+    "experts": 18,
+    "experts_work_experience": 19,
+    "experts_project_experience": 2,
+    "experts_education_experience": 18,
+    "resume": 46,
+    "resume_work_experience": 43,
+    "resume_project_experience": 2,
+    "resume_education_experience": 42,
+    "graph_nodes": 78,
+    "graph_facts": 178,
+    "company_overlap": 255,
+    "same_company": 285,
+    "same_major": 1711,
+    "same_school": 325
+  },
+  "source_digest": "ebfa6f27340364ef46eb1bba7cc52c13dd981d90156955e388fdb89fa459c503",
+  "graph_digest": "3215aff769016030107aafac0462dcaf40392cb5a8f04ae3b01bc26387d3c4e1",
+  "regression": {
+    "backend_passed": 408,
+    "backend_opt_in_skipped": 225,
+    "ruff": "passed",
+    "mypy": "passed",
+    "frontend_format": "passed",
+    "frontend_typecheck_build": "passed",
+    "default_browser_passed": 18,
+    "default_browser_skipped": 15
+  },
+  "native": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "25",
+    "time": "4.195",
+    "timestamp": "2026-11-06T18:33:00.816770+08:00",
+    "hostname": "yukadeMac-mini.local"
+  },
+  "uuid_browser": {
+    "startTime": "2026-11-06T10:38:35.821Z",
+    "duration": 10059.813,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "old_bundle_verified_read_only": true,
+  "old_space_retained": true,
+  "cloud_access": false,
+  "runtime_meta": {
+    "data_mode": "mock",
+    "data_version": "uuid-v5-ebfa6f27340364ef46eb-202611",
+    "reference_month": 202611,
+    "person_count": 63,
+    "expert_count": 18,
+    "resume_count": 45,
+    "entity_count": 15,
+    "fact_count": 178,
+    "storage": "mysql-uuid-source",
+    "graph_model": "uuid-relations-v5",
+    "relation_backend": "nebula-materialized"
+  },
+  "evidence_directory": "data/uuid-graph-trial/run-v1",
+  "evidence_files": [
+    "report.json",
+    "migration-inputs.json",
+    "native-final-tests.xml",
+    "regression-final.log",
+    "browser-release.json",
+    "runtime-meta.json"
+  ],
+  "scope": [
+    "12-table frozen fictional source subset",
+    "all 2576 derived evidence edges checked with independent raw oracle",
+    "no person names in new graph",
+    "graph owns direct relations and bounded paths, SQL owns display and background filters"
+  ],
+  "remaining": [
+    "formal 15-table normalization and publication contract",
+    "real data",
+    "production authorization and privacy controls",
+    "incremental deletion and correction",
+    "hot entity materialization budget and production scale",
+    "alias source integration"
+  ],
+  "warnings": [
+    "FastAPI TestClient deprecation warning",
+    "existing G6 bundle exceeds Vite size advisory"
+  ]
+}

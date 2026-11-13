@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "legacy-person-query",
+      "name": "旧版人物条件",
+      "savedAt": "2026-11-06T00:00:00.000Z",
+      "query": {
+        "mode": "person",
+        "referenceId": "p:000001",
+        "topicId": "org:0",
+        "topicKind": "organization",
+        "filters": {
+          "source": null,
+          "relation_type": "same_company_overlap",
+          "page_size": 20,
+          "relation_organization_ids": [],
+          "relation_start_month": null,
+          "relation_end_month": null,
+          "min_overlap_months": null
+        },
+        "dataVersion": "demo-historical-version"
+      }
+    }
+  ]
+}

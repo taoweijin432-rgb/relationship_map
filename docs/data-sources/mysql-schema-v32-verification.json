@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "review_date": "2026-11-06",
+  "checks": {
+    "reference_tables": 15,
+    "fields": 250,
+    "latest_reference_fields": 80,
+    "raw_and_confirmed_resume_fields": 170,
+    "edge_types": 3,
+    "properties_per_edge": 11,
+    "markdown_word_values": 1691,
+    "word_tables": 32,
+    "relative_links": 41,
+    "source_sha256": "568229068f9930598b16ecb6703dc717eb00b9e111e777eae7bec247684b5a8e"
+  },
+  "scope": "Document-only field/order/type/nullability coverage and Word/Markdown consistency; no database or application tests executed"
+}
