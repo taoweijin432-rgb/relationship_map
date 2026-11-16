@@ -204,7 +204,7 @@ def test_incomplete_block_is_error_not_empty_candidates() -> None:
 
 def test_graph_budget_preserves_qualified_prefix_and_marks_incomplete() -> None:
     budget = PathBudget(10000, 5000)
-    budget.graph_rows = 19000
+    budget.graph_result(19000)
     groups = {"org:a": [f"p:{n:04d}" for n in range(3000)]}
     reader = GraphPathReader(FakeSQL(), FakeGraph(budget, groups), budget)
     result = reader.candidates(

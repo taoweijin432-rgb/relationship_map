@@ -611,6 +611,12 @@ export interface components {
             /** Reference Month */
             reference_month: number;
             /**
+             * Person Display
+             * @default snapshot
+             * @enum {string}
+             */
+            person_display: "snapshot" | "mysql-live";
+            /**
              * Max Relation Hops
              * @default 1
              */
@@ -715,7 +721,7 @@ export interface components {
             /** Truncated */
             truncated: boolean;
             /** Truncation Reasons */
-            truncation_reasons: ("candidate_limit" | "path_limit" | "fact_limit" | "pair_limit" | "evidence_limit" | "time_limit" | "sql_limit" | "graph_limit")[];
+            truncation_reasons: ("candidate_limit" | "path_limit" | "fact_limit" | "pair_limit" | "evidence_limit" | "time_limit" | "sql_limit" | "graph_limit" | "cancelled")[];
             /**
              * Status
              * @enum {string}

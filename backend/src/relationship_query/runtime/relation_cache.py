@@ -11,6 +11,7 @@ from time import monotonic
 from typing import TypeVar, cast
 
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
+from relationship_query.runtime.diagnostics import observe, stage
 
 T = TypeVar("T")
 
@@ -50,6 +51,7 @@ class RelationCache:
             payload = self._get(key)
             if payload is not None:
                 self.hits += 1
+                observe("relation_cache.hit")
                 return cast(T, self._decode(payload, budget))
             disabled = self._closed or self.max_bytes == 0
             pending = self._pending.get(key)
@@ -57,13 +59,17 @@ class RelationCache:
             if not disabled and owner and len(self._pending) < 32:
                 pending = self._pending[key] = Future()
                 self.misses += 1
+                observe("relation_cache.owner")
             elif not disabled and pending is not None:
                 self.coalesced += 1
+                observe("relation_cache.follower")
         if disabled or pending is None:
+            observe("relation_cache.bypass")
             return compute()
         if not owner:
             try:
-                payload = pending.result(timeout=max(0, budget.deadline - budget.clock()))
+                with stage("RelationCache.wait"):
+                    payload = pending.result(timeout=max(0, budget.deadline - budget.clock()))
             except TimeoutError:
                 raise PathBudgetExceeded("time_limit") from None
             budget.check()

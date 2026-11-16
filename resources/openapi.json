@@ -1894,6 +1894,15 @@
             "type": "integer",
             "title": "Reference Month"
           },
+          "person_display": {
+            "type": "string",
+            "enum": [
+              "snapshot",
+              "mysql-live"
+            ],
+            "title": "Person Display",
+            "default": "snapshot"
+          },
           "max_relation_hops": {
             "type": "integer",
             "title": "Max Relation Hops",
@@ -2158,7 +2167,8 @@
                 "evidence_limit",
                 "time_limit",
                 "sql_limit",
-                "graph_limit"
+                "graph_limit",
+                "cancelled"
               ]
             },
             "type": "array",

@@ -14,6 +14,7 @@ const REASONS: Record<PathResponse['truncation_reasons'][number], string> = {
   time_limit: '处理时间预算已用尽',
   sql_limit: '查询执行预算已用尽',
   graph_limit: '图候选读取预算已用尽',
+  cancelled: '请求已取消',
 }
 export function pathLimitLabels(result: PathResponse): string[] {
   return result.truncation_reasons.map((reason) => REASONS[reason])

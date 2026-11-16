@@ -19,6 +19,8 @@ class Stage:
 @dataclass
 class DiagnosticTrace:
     stages: list[Stage] = field(default_factory=list)
+    request_id: str = "-"
+    observations: dict[str, int] = field(default_factory=dict)
 
     def totals(self) -> dict[str, dict[str, float | int]]:
         result: dict[str, dict[str, float | int]] = {}
@@ -35,27 +37,50 @@ class DiagnosticTrace:
 _current: ContextVar[DiagnosticTrace | None] = ContextVar("query_diagnostic_trace", default=None)
 
 
+def request_id() -> str:
+    trace = _current.get()
+    return trace.request_id if trace else "-"
+
+
+def observe(name: str, count: int = 1) -> None:
+    """只接受内部固定指标名；不记录查询参数或人物数据。"""
+    trace = _current.get()
+    if trace is not None:
+        trace.observations[name] = trace.observations.get(name, 0) + count
+
+
 @contextmanager
-def capture(trace: DiagnosticTrace) -> Iterator[None]:
+def stage(name: str) -> Iterator[None]:
+    trace = _current.get()
+    started = perf_counter()
+    try:
+        yield
+    finally:
+        if trace is not None:
+            trace.stages.append(Stage(name, (perf_counter() - started) * 1000))
+
+
+@contextmanager
+def capture(trace: DiagnosticTrace, *, include_in_parent: bool = False) -> Iterator[None]:
+    parent = _current.get()
     token = _current.set(trace)
     try:
         yield
     finally:
         _current.reset(token)
+        # HTTP自带观测不能遮住外层基准工具的采样；同一trace嵌套时不重复累计。
+        if include_in_parent and parent is not None and parent is not trace:
+            parent.stages.extend(trace.stages)
+            for name, count in trace.observations.items():
+                parent.observations[name] = parent.observations.get(name, 0) + count
 
 
 def traced(name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     def decorate(function: Callable[P, T]) -> Callable[P, T]:
         @wraps(function)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
-            trace = _current.get()
-            if trace is None:
+            with stage(name):
                 return function(*args, **kwargs)
-            started = perf_counter()
-            try:
-                return function(*args, **kwargs)
-            finally:
-                trace.stages.append(Stage(name, (perf_counter() - started) * 1000))
 
         return wrapped
 

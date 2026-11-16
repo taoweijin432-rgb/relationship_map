@@ -15,6 +15,7 @@ from starlette.concurrency import run_in_threadpool
 
 from relationship_query.api.routes import router
 from relationship_query.contracts import ErrorResponse
+from relationship_query.domain.path_budget import PathBudgetExceeded, shared_relation_budget
 from relationship_query.infrastructure.graph_paths import GraphPathRepository
 from relationship_query.infrastructure.mysql import MySQLPathRepository, open_mysql_engine
 from relationship_query.infrastructure.source_api import (
@@ -27,6 +28,15 @@ from relationship_query.infrastructure.source_releases import load_active
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.sqlite import open_engine
 from relationship_query.infrastructure.sqlite_paths import SQLitePathRepository
+from relationship_query.runtime.diagnostics import (
+    DiagnosticTrace,
+    capture,
+    observe,
+    stage,
+)
+from relationship_query.runtime.diagnostics import (
+    request_id as current_request_id,
+)
 from relationship_query.services.graph_paths import GraphPathService
 from relationship_query.services.paths import PathService
 from relationship_query.services.ports import PathRepository
@@ -325,6 +335,7 @@ def _error(request: Request, code: str, message: str, status: int) -> JSONRespon
 def _install_handlers(app: FastAPI) -> None:
     @app.exception_handler(QueryError)
     async def query_error(request: Request, exc: QueryError) -> JSONResponse:
+        observe(f"error.{exc.code}")
         return _error(request, exc.code, exc.message, exc.status)
 
     @app.exception_handler(RequestValidationError)
@@ -335,30 +346,65 @@ def _install_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(SQLAlchemyError)
     async def storage_error(request: Request, exc: SQLAlchemyError) -> JSONResponse:
-        logger.exception("query storage failure", exc_info=exc)
+        logger.exception("query storage failure request_id=%s", current_request_id(), exc_info=exc)
         return _error(request, "STORAGE_UNAVAILABLE", "查询存储暂不可用，请稍后重试", 503)
 
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("unexpected query failure", exc_info=exc)
+        logger.exception(
+            "unexpected query failure request_id=%s", current_request_id(), exc_info=exc
+        )
         return _error(request, "INTERNAL_ERROR", "查询服务发生异常，请稍后重试", 500)
 
     @app.middleware("http")
     async def request_metrics(request: Request, call_next: object) -> Response:
         started = perf_counter()
         request_id = uuid4().hex
+        trace = DiagnosticTrace(request_id=request_id)
         guard = getattr(request.app.state, "source_guard", None)
-        try:
-            if guard:
-                await run_in_threadpool(guard.verify_snapshot)
-            response = await call_next(request)  # type: ignore[operator]
-            if guard:
-                await run_in_threadpool(guard.verify_snapshot)
-        except QueryError as exc:
-            response = _error(request, exc.code, exc.message, exc.status)
-        except SQLAlchemyError as exc:
-            logger.exception("source snapshot verification failure", exc_info=exc)
-            response = _error(request, "STORAGE_UNAVAILABLE", "原表查询存储暂不可用", 503)
+        status = 500
+        with capture(trace, include_in_parent=True), shared_relation_budget() as budget:
+            try:
+                if guard:
+                    with stage("SourceGuard.before"):
+                        await run_in_threadpool(guard.verify_snapshot)
+                budget.check()
+                response = await call_next(request)  # type: ignore[operator]
+                if guard:
+                    with stage("SourceGuard.after"):
+                        await run_in_threadpool(guard.verify_snapshot)
+                budget.check()
+                status = response.status_code
+            except PathBudgetExceeded as exc:
+                observe(f"error.{exc.reason}")
+                response = _error(
+                    request, "GRAPH_QUERY_LIMIT", f"请求达到预算（{exc.label}），请稍后重试", 503
+                )
+                status = 503
+            except QueryError as exc:
+                observe(f"error.{exc.code}")
+                response = _error(request, exc.code, exc.message, exc.status)
+                status = exc.status
+            except SQLAlchemyError as exc:
+                logger.exception(
+                    "source snapshot verification failure request_id=%s", request_id, exc_info=exc
+                )
+                response = _error(request, "STORAGE_UNAVAILABLE", "原表查询存储暂不可用", 503)
+                status = 503
+            finally:
+                # route模板不含输入的人物ID；阶段是inclusive耗时，不能求和为总耗时。
+                route = getattr(request.scope.get("route"), "path", "unmatched")
+                logger.info(
+                    "query request completed request_id=%s method=%s route=%s status=%s "
+                    "elapsed_ms=%.2f stages=%s observations=%s",
+                    request_id,
+                    request.method,
+                    route,
+                    status,
+                    (perf_counter() - started) * 1000,
+                    trace.totals(),
+                    trace.observations,
+                )
         response.headers["X-Request-ID"] = request_id
         response.headers["Server-Timing"] = f"app;dur={(perf_counter() - started) * 1000:.1f}"
         return response

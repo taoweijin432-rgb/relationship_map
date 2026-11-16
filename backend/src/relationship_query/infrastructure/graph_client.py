@@ -23,7 +23,7 @@ from relationship_query.infrastructure.graph_model import (
 )
 from relationship_query.infrastructure.graph_sessions import GraphSession, GraphSessionPool
 from relationship_query.infrastructure.source_graph_model import SourceManifest
-from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.diagnostics import observe, request_id, stage, traced
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
 
@@ -57,7 +57,12 @@ class GraphClient:
         self, statement: str, budget: PathBudget, maximum_rows: int
     ) -> list[dict[str, Any]]:
         budget.graph_request(maximum_rows)
-        if not self.slots.acquire(timeout=max(0, min(0.1, budget.deadline - budget.clock()))):
+        with stage("GraphClient.slot_wait"):
+            acquired = self.slots.acquire(
+                timeout=max(0, min(0.1, budget.deadline - budget.clock()))
+            )
+        if not acquired:
+            observe("graph.slot_rejected")
             budget.check()
             raise QueryError("GRAPH_BUSY", "图查询连接已满，请稍后重试", 503)
         try:
@@ -65,28 +70,32 @@ class GraphClient:
             if not result.is_succeeded():
                 logger.warning(
                     "graph execution rejected code=%s detail=%s statement=%s "
-                    "calls=%s rows=%s elapsed_ms=%s",
+                    "calls=%s rows=%s elapsed_ms=%s request_id=%s",
                     result.error_code(),
                     str(result.error_msg())[:512],
                     sha256(statement.encode()).hexdigest()[:16],
                     budget.graph_calls,
                     budget.graph_rows,
                     budget.elapsed_ms(),
+                    request_id(),
                 )
                 raise GraphDependencyError(result.error_code())
             rows = list(result.as_primitive())
             if len(rows) > maximum_rows:
                 raise QueryError("GRAPH_INTEGRITY", "图投影超出已验证的读取边界", 503)
             budget.graph_result(len(rows))
+            observe("graph.rows", len(rows))
             return rows
         except IOErrorException as exc:
             if exc.type == IOErrorException.E_TIMEOUT:
                 raise PathBudgetExceeded("time_limit") from None
             logger.warning(
-                "graph dependency failure: IOErrorException type=%s statement=%s elapsed_ms=%s",
+                "graph dependency failure: IOErrorException type=%s statement=%s "
+                "elapsed_ms=%s request_id=%s",
                 exc.type,
                 sha256(statement.encode()).hexdigest()[:16],
                 budget.elapsed_ms(),
+                request_id(),
             )
             raise GraphDependencyError() from None
         except (
@@ -97,7 +106,9 @@ class GraphClient:
             OSError,
             RuntimeError,
         ) as exc:
-            logger.warning("graph dependency failure: %s", type(exc).__name__)
+            logger.warning(
+                "graph dependency failure: %s request_id=%s", type(exc).__name__, request_id()
+            )
             budget.check()
             raise GraphDependencyError() from None
         finally:
@@ -105,10 +116,12 @@ class GraphClient:
 
     def _session_result(self, statement: str, budget: PathBudget, maximum_rows: int) -> Any:
         for attempt in range(2):
-            session: GraphSession = self.sessions.borrow(budget)
+            with stage("GraphClient.session_wait"):
+                session: GraphSession = self.sessions.borrow(budget)
             reusable = False
             try:
                 budget.check()
+                observe("graph.rpc")
                 result = session.execute(f"USE `{self.manifest.space}`; " + statement, budget)
                 reusable = result.error_code() not in {
                     ErrorCode.E_SESSION_INVALID,

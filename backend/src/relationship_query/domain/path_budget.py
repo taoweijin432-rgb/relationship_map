@@ -1,6 +1,7 @@
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from threading import Event
 from time import monotonic
 from typing import Literal
 
@@ -13,6 +14,7 @@ PathLimit = Literal[
     "time_limit",
     "sql_limit",
     "graph_limit",
+    "cancelled",
 ]
 
 
@@ -32,6 +34,7 @@ class PathBudgetExceeded(Exception):
             "fact_limit": "事实数量",
             "pair_limit": "经历配对数量",
             "evidence_limit": "证据数量",
+            "cancelled": "请求已取消",
         }.get(self.reason, "查询量")
 
 
@@ -66,24 +69,53 @@ class PathBudget:
     ) -> None:
         self.clock, self.started = clock, clock()
         self.deadline = self.started + time_ms / 1000
+        self.parent = _request_budget.get()
+        if self.parent is not None:
+            # 自定义测试时钟与monotonic可能原点不同，只传播剩余时长。
+            self.deadline = min(
+                self.deadline,
+                self.started + max(0, self.parent.deadline - self.parent.clock()),
+            )
+        self._cancelled: Event = self.parent._cancelled if self.parent else Event()
         self.fact_limit, self.sql_limit, self.pair_limit = fact_limit, sql_limit, pair_limit
         self.facts = self.pairs = self.sql_steps = 0
         self.interrupted: PathLimit | None = None
-        self.graph_rows = self.graph_calls = 0
+        self._graph_rows = self._graph_calls = 0
         self.graph_candidates = 0
         self.candidate_reasons: set[PathLimit] = set()
 
     def graph_request(self, maximum_rows: int) -> None:
         self.check()
+        if self.parent is not None:
+            self.parent.graph_request(maximum_rows)
+            return
         if self.graph_calls >= 256 or self.graph_rows + maximum_rows > 20_000:
             raise PathBudgetExceeded("graph_limit")
-        self.graph_calls += 1
+        self._graph_calls += 1
 
     def graph_result(self, rows: int) -> None:
-        self.graph_rows += rows
+        if self.parent is not None:
+            self.parent.graph_result(rows)
+        else:
+            self._graph_rows += rows
         self.check()
 
+    @property
+    def graph_calls(self) -> int:
+        return self.parent.graph_calls if self.parent else self._graph_calls
+
+    @property
+    def graph_rows(self) -> int:
+        return self.parent.graph_rows if self.parent else self._graph_rows
+
+    def cancel(self) -> None:
+        self._cancelled.set()
+
     def check(self) -> None:
+        if self._cancelled.is_set():
+            raise PathBudgetExceeded("cancelled")
+        if self.parent is not None:
+            self.parent.check()
         if self.clock() >= self.deadline:
             raise PathBudgetExceeded("time_limit")
 
@@ -96,6 +128,9 @@ class PathBudget:
     def progress(self) -> int:
         self.sql_steps += 1000
         try:
+            if self.parent is not None and self.parent.progress():
+                self.interrupted = self.parent.interrupted
+                return 1
             self.check()
             if self.sql_steps >= self.sql_limit:
                 raise PathBudgetExceeded("sql_limit")
