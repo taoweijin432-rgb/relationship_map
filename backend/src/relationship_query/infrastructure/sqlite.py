@@ -16,6 +16,7 @@ from relationship_query.infrastructure.read_model import (
     schema,
     sources,
 )
+from relationship_query.infrastructure.sql_deadlines import DeadlineQueuePool, install_sql_deadlines
 from relationship_query.infrastructure.sql_repository import SQLRepository
 
 __all__ = [
@@ -34,7 +35,11 @@ SQLiteRepository = SQLRepository
 
 
 def open_engine(path: Path) -> Engine:
-    return create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{path}", connect_args={"check_same_thread": False}, poolclass=DeadlineQueuePool
+    )
+    install_sql_deadlines(engine)
+    return engine
 
 
 def load_dataset(engine: Engine, dataset: Dataset, *, reset: bool = False) -> bool:

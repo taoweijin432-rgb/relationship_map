@@ -45,14 +45,25 @@ def relation_query_budget() -> "PathBudget":
     return _request_budget.get() or PathBudget(5000, 5000)
 
 
+def current_query_budget() -> "PathBudget | None":
+    """离线构建和启动核验不自动创建交互预算。"""
+    return _request_budget.get()
+
+
 @contextmanager
-def shared_relation_budget() -> Iterator["PathBudget"]:
-    budget = relation_query_budget()
+def using_budget(budget: "PathBudget") -> Iterator["PathBudget"]:
     token = _request_budget.set(budget)
     try:
         yield budget
     finally:
         _request_budget.reset(token)
+
+
+@contextmanager
+def shared_relation_budget() -> Iterator["PathBudget"]:
+    budget = relation_query_budget()
+    with using_budget(budget):
+        yield budget
 
 
 class PathBudget:

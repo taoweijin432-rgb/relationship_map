@@ -16,7 +16,7 @@ from sqlalchemy.exc import OperationalError
 from relationship_query.app import create_app
 from relationship_query.contracts import PathRequest
 from relationship_query.domain.models import Dataset
-from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
+from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded, using_budget
 from relationship_query.infrastructure.mysql import (
     MySQLPathRepository,
     lab_url,
@@ -240,6 +240,36 @@ def test_mysql_timeout_cleans_hint_and_pool(mysql_lab: tuple[str, Engine]) -> No
     with mysql_lab[1].connect() as connection:
         assert connection.scalar(text("SELECT 1")) == 1
     assert mysql_lab[1].pool.checkedout() == 0
+
+
+def test_mysql_request_io_state_and_timeout_recovery(mysql_lab: tuple[str, Engine]) -> None:
+    engine = mysql_lab[1]
+    with engine.connect() as connection:
+        raw = connection.connection.driver_connection
+        original = (raw._read_timeout, raw._write_timeout)
+        original_execution = connection.exec_driver_sql(
+            "SELECT @@session.max_execution_time"
+        ).scalar()
+    with using_budget(PathBudget(500, 100)), engine.connect() as connection:
+        assert connection.exec_driver_sql("SELECT 1").scalar() == 1
+        raw = connection.connection.driver_connection
+        assert 0 < raw._read_timeout <= 0.5
+    with engine.connect() as connection:
+        raw = connection.connection.driver_connection
+        assert (raw._read_timeout, raw._write_timeout) == original
+        assert (
+            connection.exec_driver_sql("SELECT @@session.max_execution_time").scalar()
+            == original_execution
+        )
+    with pytest.raises(PathBudgetExceeded, match="time_limit"):
+        with using_budget(PathBudget(20, 100)) as budget, engine.connect() as connection:
+            connection.exec_driver_sql("SELECT SLEEP(0.2)").scalar()
+            budget.check()
+    assert engine.pool.checkedout() == 0
+    with engine.connect() as connection:
+        raw = connection.connection.driver_connection
+        assert (raw._read_timeout, raw._write_timeout) == original
+        assert connection.exec_driver_sql("SELECT 1").scalar() == 1
 
 
 @LIVE

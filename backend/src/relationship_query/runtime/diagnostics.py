@@ -49,6 +49,12 @@ def observe(name: str, count: int = 1) -> None:
         trace.observations[name] = trace.observations.get(name, 0) + count
 
 
+def record_stage(name: str, elapsed_ms: float) -> None:
+    trace = _current.get()
+    if trace is not None:
+        trace.stages.append(Stage(name, elapsed_ms))
+
+
 @contextmanager
 def stage(name: str) -> Iterator[None]:
     trace = _current.get()

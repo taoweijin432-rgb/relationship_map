@@ -5,7 +5,6 @@ import re
 import ssl
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +16,9 @@ from sqlalchemy.engine import URL, Connection, Engine, make_url
 from sqlalchemy.exc import OperationalError
 
 from relationship_query.contracts import PathRequest
-from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
+from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded, using_budget
 from relationship_query.infrastructure.read_model import QueryTables, dataset_meta
+from relationship_query.infrastructure.sql_deadlines import DeadlineQueuePool, install_sql_deadlines
 from relationship_query.infrastructure.sql_paths import SQLPathReader
 from relationship_query.services.ports import PathReader
 from relationship_query.services.query import QueryError
@@ -106,7 +106,11 @@ def open_remote_mysql_engine(value: str, remote: RemoteMySQL, ca_file: Path) -> 
 
 
 def _open_mysql_engine(
-    url: URL, *, writable: bool, connect_args: dict[str, Any] | None = None
+    url: URL,
+    *,
+    writable: bool,
+    connect_args: dict[str, Any] | None = None,
+    connect_factory: Callable[..., Any] | None = None,
 ) -> Engine:
     engine = create_engine(
         url,
@@ -124,7 +128,9 @@ def _open_mysql_engine(
             **(connect_args or {}),
         },
         hide_parameters=True,
+        poolclass=DeadlineQueuePool,
     )
+    install_sql_deadlines(engine, mysql_connect=connect_factory)
 
     @event.listens_for(engine, "connect")
     def configure(connection: Any, _record: Any) -> None:
@@ -158,25 +164,7 @@ class MySQLPathRepository:
     @contextmanager
     def session(self, budget: PathBudget) -> Iterator[PathReader]:
         budget.check()
-        with self.engine.connect() as connection:
-
-            def limit_select(
-                _conn: Any,
-                _cursor: Any,
-                statement: str,
-                parameters: Any,
-                _context: Any,
-                _many: Any,
-            ) -> tuple[str, Any]:
-                budget.check()
-                if statement.startswith("SELECT "):
-                    remaining = max(1, ceil((budget.deadline - budget.clock()) * 1000))
-                    statement = statement.replace(
-                        "SELECT ", f"SELECT /*+ MAX_EXECUTION_TIME({remaining}) */ ", 1
-                    )
-                return statement, parameters
-
-            event.listen(connection, "before_cursor_execute", limit_select, retval=True)
+        with using_budget(budget), self.engine.connect() as connection:
             try:
                 if self.verify:
                     self.verify(connection)
@@ -194,7 +182,6 @@ class MySQLPathRepository:
                     raise PathBudgetExceeded("time_limit") from exc
                 raise
             finally:
-                event.remove(connection, "before_cursor_execute", limit_select)
                 connection.rollback()
 
 

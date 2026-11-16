@@ -3,9 +3,8 @@
 import os
 import ssl
 from pathlib import Path
-from typing import Any
 
-from sqlalchemy import Column, MetaData, String, Table, cast, event, or_, select, text
+from sqlalchemy import Column, MetaData, String, Table, cast, or_, select, text
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -40,13 +39,9 @@ def open_people_engine(config: MySQLSourceConfig, insecure_tls: bool) -> Engine:
         port=endpoint.port,
         database=endpoint.database,
     )
-    engine = _open_mysql_engine(url, writable=False, connect_args={"ssl": context})
-
-    @event.listens_for(engine, "do_connect")
-    def require_tls(dialect: Any, record: Any, args: Any, kwargs: Any) -> Any:
-        return TLSConnection(*args, **kwargs)
-
-    return engine
+    return _open_mysql_engine(
+        url, writable=False, connect_args={"ssl": context}, connect_factory=TLSConnection
+    )
 
 
 class MySQLPeople:

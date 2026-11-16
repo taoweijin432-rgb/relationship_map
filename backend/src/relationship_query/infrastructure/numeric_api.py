@@ -16,6 +16,7 @@ from relationship_query.infrastructure.graph_model import (
 )
 from relationship_query.infrastructure.materialized_sql import MaterializedSQLRepository
 from relationship_query.infrastructure.numeric_read_model import query_schema
+from relationship_query.infrastructure.sql_deadlines import DeadlineQueuePool, install_sql_deadlines
 from relationship_query.infrastructure.sqlite_paths import SQLitePathRepository
 from relationship_query.infrastructure.uuid_graph import (
     MaterializedGraphRepository,
@@ -106,7 +107,9 @@ class NumericRepository(MaterializedSQLRepository):
         engine = create_engine(
             f"sqlite:///file:{self.release / 'source.sqlite'}?mode=ro&uri=true",
             connect_args={"check_same_thread": False},
+            poolclass=DeadlineQueuePool,
         )
+        install_sql_deadlines(engine)
         schema, tables = query_schema()
         try:
             with engine.connect() as connection:
