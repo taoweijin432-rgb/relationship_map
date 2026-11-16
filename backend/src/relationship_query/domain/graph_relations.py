@@ -6,6 +6,8 @@ from pydantic import model_validator
 
 from relationship_query.domain.models import DomainModel, Month, RelationType
 
+PROOF_PAIR_BATCH = 16
+
 
 class GraphProof(DomainModel):
     left_person: str

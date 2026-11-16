@@ -19,6 +19,7 @@ from relationship_query.domain.path_budget import (
 )
 from relationship_query.runtime.admission import Cost, QueryAdmission
 from relationship_query.runtime.diagnostics import DiagnosticTrace, capture, observe, stage
+from relationship_query.runtime.fact_indexes import fact_indexes
 from relationship_query.services.query import QueryError
 
 logger = logging.getLogger("relationship_query")
@@ -38,7 +39,11 @@ class QueryHTTPMiddleware:
         started = perf_counter()
         status = 500
         async with AsyncExitStack() as lifetime:
-            with capture(trace, include_in_parent=True), shared_relation_budget() as budget:
+            with (
+                capture(trace, include_in_parent=True),
+                fact_indexes(),
+                shared_relation_budget() as budget,
+            ):
                 try:
                     admission: QueryAdmission = request.app.state.admission
                     protected = request.url.path in {"/api/v1/health", "/api/v1/meta"}

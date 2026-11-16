@@ -14,7 +14,8 @@ from relationship_query.infrastructure.relation_sql import (
     neighborhood_probe,
     relation_pair_condition,
 )
-from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.diagnostics import observe, traced
+from relationship_query.runtime.fact_indexes import FactIndexes, current_fact_indexes
 
 
 class SQLPathReader:
@@ -27,6 +28,8 @@ class SQLPathReader:
     ) -> None:
         self.connection, self.budget, self.reference_month = connection, budget, reference_month
         self.tables = tables or QueryTables()
+        self._indexes = current_fact_indexes() or FactIndexes()
+        self._namespace = (id(connection.engine), self.tables.facts.fullname, reference_month)
 
     @traced("SQLPathReader.persons")
     def persons(self, ids: list[str]) -> dict[str, Person]:
@@ -166,7 +169,17 @@ class SQLPathReader:
 
     @traced("SQLPathReader.fact_views_by_ids")
     def fact_views_by_ids(self, ids: list[str]) -> list[FactView]:
-        return self._fact_views(self.tables.facts.c.id.in_(ids))
+        self.budget.check()
+        ordered = sorted(set(ids))
+        missing = [key for key in ordered if (self._namespace, key) not in self._indexes.sql]
+        observe("sql.fact_reused", len(ordered) - len(missing))
+        if missing:
+            self._fact_views(self.tables.facts.c.id.in_(missing))
+        return [
+            self._indexes.sql[(self._namespace, key)]
+            for key in ordered
+            if (self._namespace, key) in self._indexes.sql
+        ]
 
     def _fact_views(self, condition: Any) -> list[FactView]:
         self.budget.check()
@@ -197,7 +210,10 @@ class SQLPathReader:
             ).mappings()
         }
         self.budget.check()
-        return [
+        views = [
             FactView(fact=f, entity=entity_map[f.entity_id], role=entity_map.get(f.role_id or ""))
             for f in fact_models
         ]
+        for view in views:
+            self._indexes.sql[(self._namespace, view.fact.id)] = view
+        return views

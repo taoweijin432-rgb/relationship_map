@@ -1,6 +1,7 @@
 """将图给出的完整人物链装配为逐段来源证据。"""
 
 from relationship_query.contracts import ConnectionDetail, Evidence, PathSegment, SearchRequest
+from relationship_query.domain.graph_relations import PROOF_PAIR_BATCH
 from relationship_query.services.evidence import format_evidence, sort_evidence
 from relationship_query.services.graph_paths import GraphPathService
 from relationship_query.services.ports import MaterializedRelationReader
@@ -20,8 +21,8 @@ def connection_details(
         raise QueryError("GRAPH_INTEGRITY", "连接链人物在配套SQL中缺失", 503)
     pairs = sorted({pair for chain in chains.values() for pair in zip(chain, chain[1:])})
     segments = {}
-    for offset in range(0, len(pairs), 8):
-        batch = pairs[offset : offset + 8]
+    for offset in range(0, len(pairs), PROOF_PAIR_BATCH):
+        batch = pairs[offset : offset + PROOF_PAIR_BATCH]
         proofs = reader.read_proofs(request, batch, evidence_limit + 1)
         views = {
             view.fact.id: view

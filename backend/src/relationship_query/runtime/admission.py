@@ -27,6 +27,7 @@ from relationship_query.runtime.diagnostics import (
     record_stage,
     request_id,
 )
+from relationship_query.runtime.fact_indexes import fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
 from relationship_query.services.query_plan import (
@@ -255,7 +256,7 @@ class QueryAdmission:
 
     async def _work(self, job: _Job, operation: Callable[[], T]) -> T:
         trace = DiagnosticTrace(request_id=request_id())
-        with capture(trace, include_in_parent=True), using_budget(job.budget):
+        with capture(trace, include_in_parent=True), fact_indexes(), using_budget(job.budget):
             acquired = False
             try:
                 await self._acquire(job)

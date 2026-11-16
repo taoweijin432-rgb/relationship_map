@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import cast
 
 from relationship_query.contracts import FactView, PathRequest, RelationScope, SearchRequest
-from relationship_query.domain.graph_relations import GraphProof
+from relationship_query.domain.graph_relations import PROOF_PAIR_BATCH, GraphProof
 from relationship_query.domain.models import Person, RelationType
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_client import GraphClient
@@ -16,6 +16,8 @@ from relationship_query.infrastructure.mysql import MySQLPathRepository
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.uuid_api import UUIDRepository
 from relationship_query.infrastructure.uuid_projection import meta_properties
+from relationship_query.runtime.diagnostics import observe
+from relationship_query.runtime.fact_indexes import FactIndexes, current_fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.ports import PathReader, PathRepository
 from relationship_query.services.query import QueryError
@@ -136,6 +138,21 @@ class MaterializedReader:
         self.sql, self.client, self.budget = sql, client, budget
         self.person_lookup = person_lookup
         self.cache = cache
+        self._indexes = current_fact_indexes() or FactIndexes()
+        manifest = getattr(client, "manifest", None)
+        self._namespace = (
+            id(client),
+            *(
+                getattr(manifest, field, None)
+                for field in (
+                    "space",
+                    "projection_id",
+                    "source_digest",
+                    "data_version",
+                    "reference_month",
+                )
+            ),
+        )
 
     def persons(self, ids: list[str]) -> dict[str, Person]:
         if self.person_lookup is not None:
@@ -264,6 +281,7 @@ class MaterializedReader:
         details = self._facts(result)
         proofs = []
         for r in result:
+            self.budget.check()
             start_month, end_month = r.get("lo"), r.get("hi")
             months = (
                 (end_month // 100 - start_month // 100) * 12
@@ -299,8 +317,8 @@ class MaterializedReader:
     ) -> list[dict]:
         result = []
         for kind in kinds(scope):
-            for offset in range(0, len(pairs), 8):
-                batch = pairs[offset : offset + 8]
+            maximum = PROOF_PAIR_BATCH if limit <= 21 else 8
+            for batch in proof_batches(kind, scope, pairs, limit, maximum):
                 # Each UNION branch keeps its own ORDER/LIMIT and overflow probe.
                 statement = " UNION ALL ".join(
                     proof_query(kind, scope, left, right, limit) for left, right in batch
@@ -321,14 +339,21 @@ class MaterializedReader:
         return result
 
     def _facts(self, rows: list[dict]) -> dict[tuple, dict]:
+        self.budget.check()
         keys = {
             (r[side + "_person"], r["entity_vid"], FACTS[r["kind"]], r[side + "_rank"])
             for r in rows
             for side in ("left", "right")
         }
-        result = {}
+        result = {
+            key: self._indexes.graph[(self._namespace, key)]
+            for key in keys
+            if (self._namespace, key) in self._indexes.graph
+        }
+        observe("graph.fact_reused", len(result))
+        missing = keys - result.keys()
         for edge in ("worked_at", "studied_at", "studied_major"):
-            selected = sorted(k for k in keys if k[2] == edge)
+            selected = sorted(k for k in missing if k[2] == edge)
             for offset in range(0, len(selected), 64):
                 batch = selected[offset : offset + 64]
                 refs = ",".join(f"{literal(p)}->{literal(e)}@{rank}" for p, e, _, rank in batch)
@@ -338,13 +363,37 @@ class MaterializedReader:
                     self.budget,
                     len(batch),
                 )
+                seen = set()
                 for r in found:
-                    result[(r["source"], r["target"], edge, r["rank"])] = fact_properties(
-                        edge, r["source"], r["rank"], r["props"]
-                    )
+                    key = (r["source"], r["target"], edge, r["rank"])
+                    if key not in batch or key in seen:
+                        raise QueryError("GRAPH_INTEGRITY", "图事实批次端点或排名异常", 503)
+                    seen.add(key)
+                    result[key] = fact_properties(edge, r["source"], r["rank"], r["props"])
         if set(result) != keys:
             raise QueryError("GRAPH_INTEGRITY", "人物边引用的事实缺失", 503)
+        self.budget.check()
+        for key in missing:
+            self._indexes.graph[(self._namespace, key)] = result[key]
         return result
+
+
+def proof_batches(
+    kind: str, scope: RelationScope, pairs: list[tuple[str, str]], limit: int, maximum: int
+) -> Iterator[list[tuple[str, str]]]:
+    batch: list[tuple[str, str]] = []
+    size = 0
+    for pair in pairs:
+        length = len(proof_query(kind, scope, *pair, limit).encode()) + len(" UNION ALL ")
+        if length > 48 * 1024:
+            raise QueryError("GRAPH_QUERY_LIMIT", "图取证语句超过读取边界，请缩小范围", 503)
+        if batch and (len(batch) >= maximum or size + length > 48 * 1024):
+            yield batch
+            batch, size = [], 0
+        batch.append(pair)
+        size += length
+    if batch:
+        yield batch
 
 
 def proof_query(kind: str, scope: RelationScope, left: str, right: str, limit: int) -> str:
