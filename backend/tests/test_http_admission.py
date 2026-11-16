@@ -64,6 +64,15 @@ def test_real_routes_reject_full_heavy_queue_and_preserve_health_and_light_reads
                     rejected = await compare()
                     assert rejected.status_code == 503 and rejected.json()["code"] == "GRAPH_BUSY"
                     assert rejected.headers["Retry-After"] == "1"
+                    detail = await client.post(
+                        "/api/v1/persons/p:000002/details",
+                        json={"reference_id": "p:000001"},
+                    )
+                    assert detail.status_code == 503 and detail.json()["code"] == "GRAPH_BUSY"
+                    plain_detail = await client.post(
+                        "/api/v1/persons/p:000002/details", json={}
+                    )
+                    assert plain_detail.status_code == 200, plain_detail.text
                     for path in ("/api/v1/health", "/api/v1/meta", "/api/v1/persons/suggest"):
                         response = await client.get(path)
                         assert response.status_code == 200, response.text

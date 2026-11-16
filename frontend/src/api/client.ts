@@ -9,6 +9,7 @@ export type GraphNode = components['schemas']['GraphNode']
 export type GraphEdge = components['schemas']['GraphEdge']
 export type FactsResponse = components['schemas']['FactsResponse']
 export type EvidenceResponse = components['schemas']['EvidenceResponse']
+export type PersonDetailsResponse = components['schemas']['PersonDetailsResponse']
 export type MetaResponse = components['schemas']['MetaResponse']
 export type ComparisonResponse = components['schemas']['ComparisonResponse']
 export type FactView = components['schemas']['FactView']
@@ -101,12 +102,35 @@ export const api = {
     ),
   facts: (id: string, signal: AbortSignal) =>
     request<FactsResponse>(`/persons/${encodeURIComponent(id)}/facts`, undefined, signal),
-  evidence: (reference: string, candidate: string, signal: AbortSignal, filters?: SearchRequest) =>
-    request<EvidenceResponse>(
-      '/relations/evidence/search',
-      { reference_id: reference, candidate_id: candidate, filters: filters ?? {} },
+  details: async (
+    id: string,
+    reference: string | undefined,
+    signal: AbortSignal,
+    filters?: SearchRequest,
+  ): Promise<{ facts: FactsResponse; proof: EvidenceResponse | null }> => {
+    const data = await request<PersonDetailsResponse>(
+      `/persons/${encodeURIComponent(id)}/details`,
+      { reference_id: reference, filters: filters ?? {} },
       signal,
-    ),
+    )
+    const metadata = {
+      data_mode: data.data_mode,
+      data_version: data.data_version,
+      reference_month: data.reference_month,
+    }
+    return {
+      facts: { ...metadata, person: data.person, items: data.facts },
+      proof: data.reference
+        ? {
+            ...metadata,
+            reference: data.reference,
+            candidate: data.person,
+            items: data.evidence,
+            connection: data.connection,
+          }
+        : null,
+    }
+  },
   expand: (body: ExpandRequest, signal: AbortSignal) =>
     request<components['schemas']['ExpandResponse']>('/graph/expand', body, signal),
 }

@@ -928,6 +928,85 @@
         }
       }
     },
+    "/api/v1/persons/{person_id}/details": {
+      "post": {
+        "summary": "Person Details",
+        "operationId": "person_details_api_v1_persons__person_id__details_post",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonDetailsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetailsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/relations/evidence": {
       "get": {
         "summary": "Relation Evidence",
@@ -2486,6 +2565,97 @@
           "sources"
         ],
         "title": "Person"
+      },
+      "PersonDetailsRequest": {
+        "properties": {
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchRequest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PersonDetailsRequest"
+      },
+      "PersonDetailsResponse": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "real"
+            ],
+            "title": "Data Mode",
+            "default": "mock"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "reference_month": {
+            "type": "integer",
+            "title": "Reference Month"
+          },
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactView"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Person"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_version",
+          "reference_month",
+          "person",
+          "facts",
+          "evidence"
+        ],
+        "title": "PersonDetailsResponse"
       },
       "PersonItem": {
         "properties": {

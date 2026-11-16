@@ -19,6 +19,8 @@ from relationship_query.contracts import (
     MetaResponse,
     PathRequest,
     PathResponse,
+    PersonDetailsRequest,
+    PersonDetailsResponse,
     PersonsResponse,
     ScopedEvidenceRequest,
     SearchRequest,
@@ -134,6 +136,13 @@ async def expand_graph(body: ExpandRequest, query: Service) -> ExpandResponse:
 @router.get("/persons/{person_id}/facts", response_model=FactsResponse)
 async def person_facts(person_id: str, query: Service) -> FactsResponse:
     return await query.run("light", lambda: query.query.facts(person_id))
+
+
+@router.post("/persons/{person_id}/details", response_model=PersonDetailsResponse)
+async def person_details(
+    person_id: str, body: PersonDetailsRequest, query: Service
+) -> PersonDetailsResponse:
+    return await query.details(person_id, body)
 
 
 @router.get("/relations/evidence", response_model=EvidenceResponse)

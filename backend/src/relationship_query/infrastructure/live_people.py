@@ -15,6 +15,7 @@ from relationship_query.infrastructure.mysql import TLSConnection, _open_mysql_e
 from relationship_query.infrastructure.real_api import RealGraphRepository
 from relationship_query.infrastructure.sql_repository import prefix_match
 from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.person_reads import current_person_reads
 from relationship_query.services.query import QueryError
 from relationship_query.update.source_config import MySQLSourceConfig
 
@@ -91,6 +92,11 @@ class MySQLPeople:
 
     @traced("MySQLPeople.read")
     def read(self, ids: list[str]) -> dict[str, Person]:
+        reads = current_person_reads()
+        return reads.read(self, ids, self._read) if reads is not None else self._read(ids)
+
+    @traced("MySQLPeople.fetch")
+    def _read(self, ids: list[str]) -> dict[str, Person]:
         result: dict[str, Person] = {}
         if not ids:
             return result

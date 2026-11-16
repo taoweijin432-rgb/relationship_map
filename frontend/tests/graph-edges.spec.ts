@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import type {
-  EvidenceResponse,
+  PersonDetailsResponse,
   FactView,
   FactsResponse,
   GraphEdge,
@@ -30,45 +30,45 @@ async function repeatedExperienceFixture(page: Page) {
     }
     await route.fulfill({ response, json: data })
   })
+  function alterFacts(items: FactView[]): FactView[] {
+    const original = items.find((item) => item.fact.id === originalId)
+    if (!original) throw new Error('演示基线缺少连线事实')
+    first = {
+      ...original,
+      fact: {
+        ...original.fact,
+        position_title: '测试第一段岗位',
+        start_month: 202001,
+        end_month: 202112,
+        is_current: false,
+      },
+    }
+    second = {
+      ...original,
+      fact: {
+        ...original.fact,
+        id: 'ui-second-tenure',
+        position_title: '测试第二段岗位',
+        start_month: 201801,
+        end_month: 201912,
+        is_current: false,
+      },
+    }
+    return [first, second, ...items.filter((item) => item.fact.id !== originalId)]
+  }
   await page.route('**/api/v1/persons/*/facts', async (route) => {
     const response = await route.fetch()
     const data: FactsResponse = await response.json()
-    if (data.person.id === sourceId) {
-      const original = data.items.find((item) => item.fact.id === originalId)
-      if (!original) throw new Error('演示基线缺少连线事实')
-      // 两条同公司经历仅用于UI定位回归，不重新生成业务关系。
-      first = {
-        ...original,
-        fact: {
-          ...original.fact,
-          position_title: '测试第一段岗位',
-          start_month: 202001,
-          end_month: 202112,
-          is_current: false,
-        },
-      }
-      second = {
-        ...original,
-        fact: {
-          ...original.fact,
-          id: 'ui-second-tenure',
-          position_title: '测试第二段岗位',
-          start_month: 201801,
-          end_month: 201912,
-          is_current: false,
-        },
-      }
-      data.items = [first, second, ...data.items.filter((item) => item.fact.id !== originalId)]
-    }
+    if (data.person.id === sourceId) data.items = alterFacts(data.items)
     await route.fulfill({ response, json: data })
   })
-  await page.route('**/api/v1/relations/evidence/search', async (route) => {
+  await page.route('**/api/v1/persons/*/details', async (route) => {
     const response = await route.fetch()
-    const data: EvidenceResponse = await response.json()
-    // facts与evidence并行请求，独立从当前证据构造相同的两条测试事实。
-    const proof = data.items.find((item) => item.candidate.fact.id === originalId)
+    const data: PersonDetailsResponse = await response.json()
+    if (data.person.id === sourceId) data.facts = alterFacts(data.facts)
+    const proof = data.evidence?.find((item) => item.candidate.fact.id === originalId)
     if (!proof) throw new Error('演示基线缺少连线证据')
-    data.items = [
+    data.evidence = [
       { ...proof, id: 'ui-proof-first', label: '测试第一段证据' },
       {
         ...proof,
@@ -113,7 +113,7 @@ test('边标签开关、悬停时间和同公司多经历精确定位', async ({
   const errors: string[] = []
   let factRequests = 0
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.endsWith('/facts')) factRequests++
+    if (/\/(facts|details)$/.test(new URL(request.url()).pathname)) factRequests++
   })
   page.on('pageerror', (error) => errors.push(error.message))
   const { edges } = await repeatedExperienceFixture(page)
@@ -156,15 +156,18 @@ test('边标签开关、悬停时间和同公司多经历精确定位', async ({
 test('悬停失败后可以点击读取详情，详情失败重试保留连线定位', async ({ page }) => {
   const { edges, sourceId } = await repeatedExperienceFixture(page)
   let failed = true
-  await page.route(`**/api/v1/persons/${encodeURIComponent(sourceId)}/facts`, async (route) => {
-    if (failed)
-      await route.fulfill({
-        status: 503,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: '测试经历暂不可用' }),
-      })
-    else await route.fallback()
-  })
+  await page.route(
+    new RegExp(`/api/v1/persons/${encodeURIComponent(sourceId)}/(?:facts|details)$`),
+    async (route) => {
+      if (failed)
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: '测试经历暂不可用' }),
+        })
+      else await route.fallback()
+    },
+  )
   const point = await edgePoint(page, edges[1].id)
   await expect(page.getByRole('tooltip')).toContainText('测试经历暂不可用')
   await page.mouse.click(point.x, point.y)
@@ -177,11 +180,14 @@ test('悬停失败后可以点击读取详情，详情失败重试保留连线�
 
 test('悬停及点击拒绝混用新版本事实', async ({ page }) => {
   const { edges, sourceId } = await repeatedExperienceFixture(page)
-  await page.route(`**/api/v1/persons/${encodeURIComponent(sourceId)}/facts`, async (route) => {
-    const response = await route.fetch()
-    const data: FactsResponse = await response.json()
-    await route.fulfill({ response, json: { ...data, data_version: 'ui-new-version' } })
-  })
+  await page.route(
+    new RegExp(`/api/v1/persons/${encodeURIComponent(sourceId)}/(?:facts|details)$`),
+    async (route) => {
+      const response = await route.fetch()
+      const data: FactsResponse = await response.json()
+      await route.fulfill({ response, json: { ...data, data_version: 'ui-new-version' } })
+    },
+  )
   const point = await edgePoint(page, edges[0].id)
   await expect(page.getByRole('tooltip')).toContainText('版本不一致')
   await page.mouse.click(point.x, point.y)

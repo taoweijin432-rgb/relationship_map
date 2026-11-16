@@ -14,7 +14,8 @@ from relationship_query.infrastructure.relation_sql import (
     neighborhood_probe,
     relation_pair_condition,
 )
-from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.diagnostics import observe, traced
+from relationship_query.runtime.fact_indexes import current_fact_indexes
 
 
 def prefix_match(engine: Engine, column: Any, keyword: str) -> Any:
@@ -294,6 +295,26 @@ class SQLRepository:
     def fact_views(self, ids: list[str]) -> list[FactView]:
         if not ids:
             return []
+        indexes = current_fact_indexes()
+        if indexes is None:
+            return self._read_fact_views(ids)
+        namespace = (id(self.engine), self.tables.facts.fullname, self.reference_month)
+        missing = sorted({key for key in ids if (namespace, key) not in indexes.person_facts})
+        observe("sql.person_facts_reused", len(set(ids)) - len(missing))
+        if missing:
+            views = self._read_fact_views(missing)
+            for view in views:
+                indexes.sql[(namespace, view.fact.id)] = view
+            grouped: dict[str, list[str]] = {key: [] for key in missing}
+            for view in views:
+                grouped[view.fact.person_id].append(view.fact.id)
+            indexes.person_facts.update(
+                ((namespace, key), tuple(values)) for key, values in grouped.items()
+            )
+        fact_ids = {fact for key in ids for fact in indexes.person_facts[(namespace, key)]}
+        return [indexes.sql[(namespace, fact)] for fact in sorted(fact_ids)]
+
+    def _read_fact_views(self, ids: list[str]) -> list[FactView]:
         with self.engine.connect() as connection:
             rows = connection.execute(
                 select(self.tables.facts)

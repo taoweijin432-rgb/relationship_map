@@ -273,6 +273,28 @@ def call(client, endpoint, body):
     return response.json()
 
 
+@pytest.mark.parametrize("depth", [1, 2, 3, 4])
+def test_native_combined_details_preserve_scoped_connection(native_chain, depth):
+    filters = {"max_hops": depth, "relation_type": "same_company_overlap"}
+    reference, candidate = "p:expert:1", "p:expert:3"
+    details = call(
+        native_chain,
+        f"/persons/{candidate}/details",
+        {"reference_id": reference, "filters": filters},
+    )
+    facts = native_chain.get(f"/api/v1/persons/{candidate}/facts").json()
+    proof = call(
+        native_chain,
+        "/relations/evidence/search",
+        {"reference_id": reference, "candidate_id": candidate, "filters": filters},
+    )
+    assert details["person"] == facts["person"] == proof["candidate"]
+    assert details["facts"] == facts["items"]
+    assert details["reference"] == proof["reference"]
+    assert details["evidence"] == proof["items"]
+    assert details["connection"] == proof["connection"]
+
+
 @pytest.mark.parametrize(
     "depth,expected",
     [

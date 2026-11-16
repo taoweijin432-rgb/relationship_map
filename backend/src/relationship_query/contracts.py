@@ -254,6 +254,19 @@ class ScopedEvidenceRequest(Contract):
     filters: SearchRequest = Field(default_factory=SearchRequest)
 
 
+class PersonDetailsRequest(Contract):
+    reference_id: str | None = Field(default=None, min_length=1, max_length=100)
+    filters: SearchRequest = Field(default_factory=SearchRequest)
+
+
+class PersonDetailsResponse(Metadata):
+    person: Person
+    facts: list[FactView]
+    reference: Person | None = None
+    evidence: list[Evidence]
+    connection: ConnectionDetail | None = None
+
+
 class EntityResponse(Metadata):
     entity: Entity
 

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { startPersonQuery, advanced, saved, closeSaved, graphView } from './helpers'
 import { experienceGroups } from '../src/features/experienceGroups'
-import type { EvidenceResponse, FactsResponse, FactView } from '../src/api/client'
+import type { PersonDetailsResponse, FactsResponse, FactView } from '../src/api/client'
 
 test('初始等待选人，编辑保留结果，分页保存导出受控，重置恢复初始', async ({ page }) => {
   const searches: string[] = []
@@ -146,24 +146,18 @@ for (const viewport of [
   test(`${viewport.width}×${viewport.height} 长证据和履历在面板内滚动`, async ({ page }) => {
     await page.setViewportSize(viewport)
     // 仅扩充界面测试响应，确保两种页签均有超长内容。
-    await page.route('**/api/v1/relations/evidence/search', async (route) => {
+    await page.route('**/api/v1/persons/*/details', async (route) => {
       const response = await route.fetch()
-      const data: EvidenceResponse = await response.json()
-      const proof = data.items[0]
-      if (!proof) throw new Error('演示基线缺少共同经历')
-      data.items = Array.from({ length: 32 }, (_, index) => ({
+      const data: PersonDetailsResponse = await response.json()
+      const proof = data.evidence?.[0]
+      const view = data.facts[0]
+      if (!proof || !view) throw new Error('演示基线缺少经历或共同证据')
+      data.evidence = Array.from({ length: 32 }, (_, index) => ({
         ...proof,
         id: `scroll-proof-${index}`,
         explanation: `滚动测试证据 ${index + 1}`,
       }))
-      await route.fulfill({ response, json: data })
-    })
-    await page.route('**/api/v1/persons/*/facts', async (route) => {
-      const response = await route.fetch()
-      const data: FactsResponse = await response.json()
-      const view = data.items[0]
-      if (!view) throw new Error('演示基线缺少人物经历')
-      data.items = Array.from({ length: 32 }, (_, index) => ({
+      data.facts = Array.from({ length: 32 }, (_, index) => ({
         ...view,
         fact: { ...view.fact, id: `scroll-fact-${index}`, experience_key: null },
       }))

@@ -14,6 +14,8 @@ from relationship_query.contracts import (
     ExportResponse,
     PathRequest,
     PathResponse,
+    PersonDetailsRequest,
+    PersonDetailsResponse,
     SearchRequest,
     SearchResponse,
 )
@@ -62,6 +64,12 @@ class QueryDispatch:
         return await self.run(
             "heavy",
             partial(self._verified, partial(self.query.evidence, reference, candidate, filters)),
+        )
+
+    async def details(self, person_id: str, body: PersonDetailsRequest) -> PersonDetailsResponse:
+        return await self.run(
+            "heavy" if body.reference_id and body.reference_id != person_id else "light",
+            partial(self._verified, partial(self.query.details, person_id, body)),
         )
 
     async def compare(self, reference: str, candidate: str) -> ComparisonResponse:

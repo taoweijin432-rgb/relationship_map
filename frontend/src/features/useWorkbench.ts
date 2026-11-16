@@ -197,20 +197,17 @@ export function useWorkbench() {
     detailLoading.value = true
     try {
       const root = reference.value?.id
-      const [facts, proof] = await Promise.all([
-        api.facts(id, controller.signal),
-        root && root !== id
-          ? api.evidence(root, id, controller.signal, results.value?.applied_filters)
-          : Promise.resolve(null),
-      ])
+      const { facts, proof } = await api.details(
+        id,
+        root && root !== id ? root : undefined,
+        controller.signal,
+        results.value?.applied_filters,
+      )
       if (controller.signal.aborted) return
       if (
-        (results.value &&
-          (facts.data_version !== results.value.data_version ||
-            facts.reference_month !== results.value.reference_month)) ||
-        (proof &&
-          (proof.data_version !== facts.data_version ||
-            proof.reference_month !== facts.reference_month))
+        results.value &&
+        (facts.data_version !== results.value.data_version ||
+          facts.reference_month !== results.value.reference_month)
       )
         throw new Error('关系图与经历版本不一致，请重新查询。')
       detail.value = facts

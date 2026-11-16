@@ -17,6 +17,8 @@ from relationship_query.contracts import (
     FactsResponse,
     FactView,
     MetadataFields,
+    PersonDetailsRequest,
+    PersonDetailsResponse,
     PersonItem,
     RelationScope,
     RelationSummary,
@@ -26,6 +28,8 @@ from relationship_query.contracts import (
 from relationship_query.domain.models import Person, RelationType
 from relationship_query.domain.path_budget import current_query_budget
 from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.fact_indexes import fact_indexes
+from relationship_query.runtime.person_reads import PersonReadChanged, person_reads
 from relationship_query.services.evidence import build_evidence
 from relationship_query.services.graph import build_graph
 from relationship_query.services.ports import QueryRepository
@@ -231,6 +235,30 @@ class QueryService:
             person=self.require_person(person_id),
             items=self.repository.fact_views([person_id]),
         )
+
+    @traced("QueryService.details")
+    def details(self, person_id: str, request: PersonDetailsRequest) -> PersonDetailsResponse:
+        try:
+            with fact_indexes(), person_reads() as reads:
+                proof = (
+                    self.evidence(request.reference_id, person_id, request.filters)
+                    if request.reference_id and request.reference_id != person_id
+                    else None
+                )
+                result = PersonDetailsResponse(
+                    **self.metadata(),
+                    person=proof.candidate if proof else self.require_person(person_id),
+                    facts=self.repository.fact_views([person_id]),
+                    reference=proof.reference if proof else None,
+                    evidence=proof.items if proof else [],
+                    connection=proof.connection if proof else None,
+                )
+                reads.verify()
+                return result
+        except PersonReadChanged:
+            raise QueryError(
+                "PERSON_SOURCE_CHANGED", "人物在详情查询期间已变化，请重新查询", 503
+            ) from None
 
     @traced("QueryService.evidence")
     def evidence(

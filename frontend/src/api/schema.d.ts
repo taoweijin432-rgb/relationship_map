@@ -225,6 +225,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/persons/{person_id}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Person Details */
+        post: operations["person_details_api_v1_persons__person_id__details_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/relations/evidence": {
         parameters: {
             query?: never;
@@ -802,6 +819,32 @@ export interface components {
             active: boolean;
             /** Serial Number */
             serial_number?: string | null;
+        };
+        /** PersonDetailsRequest */
+        PersonDetailsRequest: {
+            /** Reference Id */
+            reference_id?: string | null;
+            filters?: components["schemas"]["SearchRequest"];
+        };
+        /** PersonDetailsResponse */
+        PersonDetailsResponse: {
+            /**
+             * Data Mode
+             * @default mock
+             * @enum {string}
+             */
+            data_mode: "mock" | "real";
+            /** Data Version */
+            data_version: string;
+            /** Reference Month */
+            reference_month: number;
+            person: components["schemas"]["Person"];
+            /** Facts */
+            facts: components["schemas"]["FactView"][];
+            reference?: components["schemas"]["Person"] | null;
+            /** Evidence */
+            evidence: components["schemas"]["Evidence"][];
+            connection?: components["schemas"]["ConnectionDetail"] | null;
         };
         /** PersonItem */
         PersonItem: {
@@ -1688,6 +1731,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FactsResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    person_details_api_v1_persons__person_id__details_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonDetailsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonDetailsResponse"];
                 };
             };
             /** @description Not Found */

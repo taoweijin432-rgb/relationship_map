@@ -16,6 +16,7 @@ GraphFactKey = tuple[str, str, str, int]
 class FactIndexes:
     graph: dict[tuple[Namespace, GraphFactKey], dict[str, Any]] = field(default_factory=dict)
     sql: dict[tuple[Namespace, str], FactView] = field(default_factory=dict)
+    person_facts: dict[tuple[Namespace, str], tuple[str, ...]] = field(default_factory=dict)
 
 
 _current: ContextVar[FactIndexes | None] = ContextVar("request_fact_indexes", default=None)
