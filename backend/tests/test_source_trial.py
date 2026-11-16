@@ -22,7 +22,7 @@ from tests.reference_oracle import expected_people, scoped_proofs
 from tests.test_paths import _expected_paths, _signatures
 
 ROOT = Path(__file__).resolve().parents[2]
-INPUT = ROOT / "docs/examples/source-trial-sample.json"
+INPUT = ROOT / "resources/examples/source-trial-sample.json"
 CASES = json.loads((Path(__file__).parent / "fixtures/source-trial-cases.json").read_text())
 
 
@@ -115,15 +115,14 @@ def test_unused_upstream_columns_can_be_removed():
 
 
 def test_sampling_audit_contains_only_one_bounded_select():
-    audit = json.loads((ROOT / "docs/data-sources/source-trial-cloud-read.json").read_text())
+    audit = json.loads((ROOT / "resources/data-sources/source-trial-cloud-read.json").read_text())
     assert audit["cloud_write_calls"] == audit["follow_up_cloud_calls"] == 0
     assert len(audit["calls"]) == 1
     call = audit["calls"][0]
     assert call["operation"] == "SELECT" and call["mapping_limit"] <= 100
     assert not call["views_called"] and not call["stored_procedures_called"]
-    assert call["sql"] == (ROOT / "docs/examples/source-trial-sampling.sql").read_text().rstrip(
-        "\n"
-    )
+    sql = (ROOT / "resources/examples/source-trial-sampling.sql").read_text().rstrip("\n")
+    assert call["sql"] == sql
 
 
 @pytest.mark.parametrize(

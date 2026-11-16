@@ -662,7 +662,7 @@ def distribution(rows: dict[str, list[dict]], relations: list[dict]) -> dict:
 
 def contract_for(database: str) -> dict:
     contract = json.loads(
-        (ROOT / "docs/examples/update-authoritative-contract-v1.json").read_text()
+        (ROOT / "resources/examples/update-authoritative-contract-v1.json").read_text()
     )
     for binding in contract["tables"].values():
         binding["physical"] = database + "." + binding["physical"].split(".")[1]

@@ -15,7 +15,7 @@ from relationship_query.domain.models import Dataset
 from relationship_query.domain.validation import DatasetValidationError, validate_payload
 from relationship_query.infrastructure.sqlite import load_dataset, open_engine
 
-SAMPLE = Path(__file__).resolve().parents[2] / "docs/examples/logical-dataset.json"
+SAMPLE = Path(__file__).resolve().parents[2] / "resources/examples/logical-dataset.json"
 
 
 @pytest.fixture

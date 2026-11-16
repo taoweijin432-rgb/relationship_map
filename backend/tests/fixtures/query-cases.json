@@ -1,5 +1,5 @@
 {
-  "description": "人工列举预期集合，不从实现或基准算法生成；与 docs/examples/logical-dataset.json 配套",
+  "description": "人工列举预期集合，不从实现或基准算法生成；与 resources/examples/logical-dataset.json 配套",
   "searches": [
     {
       "name": "最短同期不累加重复或多次任职",

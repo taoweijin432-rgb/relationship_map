@@ -31,7 +31,7 @@ from verify_graph_ddl import (
 
 EXTENSION = ROOT / "infra/nebula/schema/person-relations-v3.ngql"
 MODEL = "uuid-relations-v5"
-EXPECTED = ROOT / "docs/examples/person-relations-v3-expected.json"
+EXPECTED = ROOT / "resources/examples/person-relations-v3-expected.json"
 RELATION_SOURCES = {
     "same_company": ("worked_at", "company", (COMPANY_A, COMPANY_B)),
     "company_overlap": ("worked_at", "company", (COMPANY_A, COMPANY_B)),

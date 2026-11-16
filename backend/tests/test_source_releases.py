@@ -356,7 +356,7 @@ def test_invalid_correction_blocks_before_new_database_or_query_bundle(tmp_path)
     import sys
 
     a, _ = live_paths()
-    plan = json.loads((ROOT / "docs/examples/source-correction-plan.json").read_text())
+    plan = json.loads((ROOT / "resources/examples/source-correction-plan.json").read_text())
     plan["corrections"][-2]["values"]["entity_id"] = 999999
     file = tmp_path / "invalid-plan.json"
     file.write_text(json.dumps(plan))

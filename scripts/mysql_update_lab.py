@@ -178,7 +178,7 @@ def source_rows(settings: dict) -> dict[str, list[dict]]:
 
 def check_schema(settings: dict, reader: dict) -> dict:
     expected = json.loads(
-        (ROOT / "docs/data-sources/mysql-file-mapping-review-eafd2c32.json").read_text()
+        (ROOT / "resources/data-sources/mysql-file-mapping-review-eafd2c32.json").read_text()
     )
     with (
         closing(

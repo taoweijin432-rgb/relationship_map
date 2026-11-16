@@ -19,7 +19,7 @@ from relationship_query.services.query import QueryService
 from tests.differential_data import differential_dataset
 from tests.reference_oracle import scoped_proofs
 
-SAMPLE = Path(__file__).resolve().parents[2] / "docs/examples/logical-dataset.json"
+SAMPLE = Path(__file__).resolve().parents[2] / "resources/examples/logical-dataset.json"
 ENDPOINT = "/api/v1/relations/paths"
 
 

@@ -14,7 +14,7 @@ from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.update.contract import SourceContract
 from relationship_query.update.projection import NumericProjectionAdapter
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "docs/examples"
+EXAMPLES = Path(__file__).resolve().parents[2] / "resources/examples"
 
 
 @pytest.fixture

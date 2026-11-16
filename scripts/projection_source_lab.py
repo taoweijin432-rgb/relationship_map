@@ -55,7 +55,7 @@ def checksum(value: Any) -> str:
 
 
 def raw_statements() -> list[str]:
-    text = (ROOT / "docs/examples/expert-source-tables.sql").read_text()
+    text = (ROOT / "resources/examples/expert-source-tables.sql").read_text()
     result = []
     for statement in text.split(";"):
         statement = re.sub(r"(?m)^--[^\n]*", "", statement).strip()

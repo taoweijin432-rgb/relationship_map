@@ -11,7 +11,7 @@ from relationship_query.domain.models import Dataset
 from relationship_query.infrastructure.sqlite import load_dataset, open_engine
 from tests.reference_oracle import scoped_proofs
 
-SAMPLE = Path(__file__).resolve().parents[2] / "docs/examples/logical-dataset.json"
+SAMPLE = Path(__file__).resolve().parents[2] / "resources/examples/logical-dataset.json"
 
 
 def test_export_does_not_modify_database_or_input(client: TestClient) -> None:

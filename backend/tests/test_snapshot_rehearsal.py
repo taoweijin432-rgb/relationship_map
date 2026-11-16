@@ -10,7 +10,7 @@ from relationship_query.app import create_app
 from relationship_query.domain.models import Dataset
 from relationship_query.infrastructure.sqlite import load_dataset, open_engine
 
-SAMPLE = Path(__file__).resolve().parents[2] / "docs/examples/logical-dataset.json"
+SAMPLE = Path(__file__).resolve().parents[2] / "resources/examples/logical-dataset.json"
 
 
 def publish_stopped_snapshot(path: Path, payload: dict[str, Any]) -> None:

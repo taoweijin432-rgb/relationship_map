@@ -9,7 +9,7 @@
     "format": "prettier --write src tests *.ts *.json index.html",
     "format:check": "prettier --check src tests *.ts *.json index.html",
     "build": "vue-tsc --noEmit && vite build",
-    "generate:api": "openapi-typescript ../docs/openapi.json -o src/api/schema.d.ts",
+    "generate:api": "openapi-typescript ../resources/openapi.json -o src/api/schema.d.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

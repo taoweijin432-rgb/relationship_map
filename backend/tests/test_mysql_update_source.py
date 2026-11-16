@@ -17,7 +17,7 @@ from relationship_query.update.models import Cursor, SourceSnapshot, UpdateError
 from relationship_query.update.mysql_source import MySQLSource, json_row
 from relationship_query.update.projection import NumericProjectionAdapter
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "docs/examples"
+EXAMPLES = Path(__file__).resolve().parents[2] / "resources/examples"
 
 
 @pytest.fixture

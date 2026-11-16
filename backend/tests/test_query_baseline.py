@@ -19,7 +19,7 @@ from tests.reference_oracle import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-GOLDEN_DATA = ROOT / "docs/examples/logical-dataset.json"
+GOLDEN_DATA = ROOT / "resources/examples/logical-dataset.json"
 CASES = json.loads((Path(__file__).parent / "fixtures/query-cases.json").read_text())
 
 

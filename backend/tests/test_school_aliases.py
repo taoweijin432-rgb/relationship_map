@@ -27,7 +27,7 @@ def school_capture(tmp_path):
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    tables = json.loads((ROOT / "docs/examples/update-baseline-v1.json").read_text())["tables"]
+    tables = json.loads((ROOT / "resources/examples/update-baseline-v1.json").read_text())["tables"]
     del tables["mock.graph_expert_name_mapping"]
     entities, people = {}, {}
     for logical, physical in (module.ENTITY_TABLES | module.PERSON_TABLES).items():

@@ -31,7 +31,7 @@ from relationship_query.update.store import UpdateStore
 from relationship_query.update.target import NebulaTarget
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES = ROOT / "docs/examples"
+EXAMPLES = ROOT / "resources/examples"
 KINDS = ("same_company", "company_overlap", "same_school", "same_major")
 PEOPLE = ["p:expert:1", "p:resume:1", "p:resume:2"]
 

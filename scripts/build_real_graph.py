@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def real_contract(entities: dict, people: dict) -> SourceContract:
-    data = json.loads((ROOT / "docs/examples/update-authoritative-contract-v1.json").read_text())
+    data = json.loads((ROOT / "resources/examples/update-authoritative-contract-v1.json").read_text())
     data.update(version="real-split-mysql-v2", adapter="numeric-authoritative-v2")
     for logical, binding in data["tables"].items():
         source = entities if logical in ENTITY_TABLES else people

@@ -27,7 +27,7 @@ from relationship_query.update.source import ReplaySource
 from relationship_query.update.store import UpdateStore
 
 ROOT = Path(__file__).resolve().parents[2]
-EXAMPLES = ROOT / "docs/examples"
+EXAMPLES = ROOT / "resources/examples"
 
 
 class Transactions:
