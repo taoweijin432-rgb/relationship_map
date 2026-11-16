@@ -100,6 +100,9 @@ def test_id_plan_contains_no_person_display_or_evidence(client):
         "ids",
         "has_more",
         "next_cursor",
+        "query_key",
+        "chains",
+        "probe_id",
     }
     assert plan.data_version == service.repository.version
     assert plan.reference_id == "p:000001"

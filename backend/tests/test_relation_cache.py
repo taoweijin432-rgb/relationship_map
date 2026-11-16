@@ -1,8 +1,7 @@
-"""缓存版本／条件隔离、内存边界及并发等待与失败恢复。"""
+"""缓存版本／条件隔离、内存边界及线程安全；异步等待与恢复见test_query_admission。"""
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier, Event, Lock
-from time import sleep
+from threading import Event
 
 import pytest
 
@@ -46,65 +45,57 @@ def test_memory_limit_and_oversized_result_do_not_change_results():
     assert cache._bytes <= 120
 
 
-def test_same_key_is_computed_once_for_concurrent_callers():
+def test_concurrent_overwrites_keep_exact_memory_accounting():
     cache = RelationCache("release")
-    barrier, lock = Barrier(4), Lock()
-    calls = []
 
-    def compute():
-        with lock:
-            calls.append(1)
-        sleep(0.03)
-        return ["p:1", "p:2"]
-
-    def worker(_):
-        barrier.wait(3)
-        return cache.get_or_compute("same", budget(), compute)
+    def write(index):
+        for offset in range(50):
+            cache.store(index % 3, [index, offset], budget())
 
     with ThreadPoolExecutor(max_workers=4) as executor:
-        assert list(executor.map(worker, range(4))) == [["p:1", "p:2"]] * 4
-    assert len(calls) == 1 and cache.coalesced == 3
+        list(executor.map(write, range(12)))
+    assert cache._bytes == sum(
+        len(key) + len(payload) for key, (_, payload) in cache._entries.items()
+    )
+    assert cache._bytes <= cache.max_bytes
 
 
-def test_waiter_timeout_does_not_cancel_other_callers_computation():
+def test_storage_never_blocks_a_thread_waiting_for_another_calculation():
+    # 同键归并已移到异步入口；同步存储不再持有或等待Future。
     cache = RelationCache("release")
     started, finish = Event(), Event()
 
     def compute():
         started.set()
         assert finish.wait(3)
-        return ["p:2"]
+        return ["first"]
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         owner = executor.submit(cache.get_or_compute, "same", budget(), compute)
-        assert started.wait(3)
-        with pytest.raises(PathBudgetExceeded):
-            cache.get_or_compute("same", PathBudget(5, 100), lambda: pytest.fail("duplicate"))
-        finish.set()
-        assert owner.result() == ["p:2"]
-    assert cache.get_or_compute("same", budget(), lambda: pytest.fail("not cached")) == ["p:2"]
+        try:
+            assert started.wait(3)
+            assert cache.get_or_compute("same", PathBudget(50, 100), lambda: ["second"]) == [
+                "second"
+            ]
+        finally:
+            finish.set()
+        assert owner.result() == ["first"]
+    assert cache.lookup("same", budget()) == ["first"]
 
 
-def test_failures_are_not_cached_and_waiters_receive_explicit_error():
+def test_failures_and_expired_access_are_not_cached():
     cache = RelationCache("release")
-    started, finish = Event(), Event()
 
     def failure():
-        started.set()
-        assert finish.wait(3)
         raise QueryError("GRAPH_UNAVAILABLE", "test-only", 503)
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        owner = executor.submit(cache.get_or_compute, "same", budget(), failure)
-        assert started.wait(3)
-        waiter = executor.submit(cache.get_or_compute, "same", budget(), lambda: ["unexpected"])
-        sleep(0.02)
-        finish.set()
-        for task in (owner, waiter):
-            with pytest.raises(QueryError) as error:
-                task.result()
-            assert error.value.code == "GRAPH_UNAVAILABLE"
-    assert not cache._pending and not cache._entries
+    with pytest.raises(QueryError):
+        cache.get_or_compute("same", budget(), failure)
+    assert not cache._entries
+    expired = PathBudget(1, 100, clock=lambda: 0)
+    expired.clock = lambda: 1
+    with pytest.raises(PathBudgetExceeded):
+        cache.get_or_compute("same", expired, lambda: pytest.fail("expired compute"))
     assert cache.get_or_compute("same", budget(), lambda: ["recovered"]) == ["recovered"]
 
 

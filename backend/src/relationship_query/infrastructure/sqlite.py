@@ -36,7 +36,10 @@ SQLiteRepository = SQLRepository
 
 def open_engine(path: Path) -> Engine:
     engine = create_engine(
-        f"sqlite:///{path}", connect_args={"check_same_thread": False}, poolclass=DeadlineQueuePool
+        f"sqlite:///{path}",
+        connect_args={"check_same_thread": False},
+        poolclass=DeadlineQueuePool,
+        hide_parameters=True,
     )
     install_sql_deadlines(engine)
     return engine

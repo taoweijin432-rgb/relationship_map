@@ -24,11 +24,12 @@ from relationship_query.contracts import (
     SearchResponse,
 )
 from relationship_query.domain.models import Person, RelationType
+from relationship_query.domain.path_budget import current_query_budget
 from relationship_query.runtime.diagnostics import traced
 from relationship_query.services.evidence import build_evidence
 from relationship_query.services.graph import build_graph
 from relationship_query.services.ports import QueryRepository
-from relationship_query.services.query_plan import DirectPage, PersonPagePlan
+from relationship_query.services.query_plan import DirectPage, PersonPagePlan, supplied_plan
 
 
 class QueryError(Exception):
@@ -49,7 +50,15 @@ class QueryService:
         kind: RelationType | None = None,
         filters: RelationScope | None = None,
     ) -> list[Evidence]:
-        return build_evidence(left, right, reference_month, kind, filters)
+        budget = current_query_budget()
+        return build_evidence(
+            left,
+            right,
+            reference_month,
+            kind,
+            filters,
+            check_pair=budget.check_pair if budget is not None else None,
+        )
 
     def metadata(self) -> MetadataFields:
         return {
@@ -108,6 +117,10 @@ class QueryService:
         self._validate_filters(request, reference_id)
         fingerprint = self._fingerprint(request, reference_id)
         after = self._decode_cursor(request.cursor, fingerprint) if request.cursor else None
+        key = self.plan_key(request, reference_id)
+        prepared = supplied_plan(key)
+        if prepared is not None:
+            return prepared
         found = self.repository.search_ids(request, reference_id, after)
         ids, has_more = found[: request.page_size], len(found) > request.page_size
         return PersonPagePlan(
@@ -118,13 +131,35 @@ class QueryService:
             tuple(ids),
             has_more,
             self._encode_cursor(ids[-1], fingerprint) if has_more else None,
+            query_key=key,
+            probe_id=found[request.page_size] if has_more else None,
         )
+
+    def plan_key(
+        self, request: SearchRequest, reference_id: str | None, candidate_id: str | None = None
+    ) -> str:
+        content = {
+            "format": "person-id-plan-v2",
+            **self.metadata(),
+            "filters": request.model_dump(mode="json"),
+            "reference": reference_id,
+            "candidate": candidate_id,
+        }
+        return hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()
 
     def _direct_page(self, request: SearchRequest, reference_id: str | None) -> DirectPage:
         reference = self.require_person(reference_id) if reference_id else None
         plan = self.select_page(request, reference_id)
         ids = list(plan.ids)
-        persons = sorted(self.repository.persons(ids), key=lambda p: p.id)
+        checked = ids + (
+            [plan.probe_id]
+            if plan.probe_id
+            and getattr(self.repository, "person_display", "snapshot") == "mysql-live"
+            else []
+        )
+        persons = sorted(
+            (p for p in self.repository.persons(checked) if p.id in ids), key=lambda p: p.id
+        )
         views = self.repository.fact_views(ids + ([reference_id] if reference_id else []))
         proofs = (
             self._proofs([(reference_id, p.id) for p in persons], views, request)

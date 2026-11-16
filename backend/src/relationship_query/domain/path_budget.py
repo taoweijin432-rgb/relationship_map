@@ -123,6 +123,23 @@ class PathBudget:
     def cancel(self) -> None:
         self._cancelled.set()
 
+    def absorb(self, other: "PathBudget") -> None:
+        """共享冷计算的使用量计入参与请求；不能在装配阶段重新获得一套额度。"""
+        self.check()
+        if self.parent is not None:
+            self.parent.absorb(other)
+            return
+        if (
+            self.graph_calls + other.graph_calls > 256
+            or self.graph_rows + other.graph_rows > 20_000
+        ):
+            raise PathBudgetExceeded("graph_limit")
+        self._graph_calls += other.graph_calls
+        self._graph_rows += other.graph_rows
+        self.sql_steps += other.sql_steps
+        if self.sql_steps >= self.sql_limit:
+            raise PathBudgetExceeded("sql_limit")
+
     def check(self) -> None:
         if self._cancelled.is_set():
             raise PathBudgetExceeded("cancelled")

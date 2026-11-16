@@ -1,17 +1,16 @@
-"""进程内发布缓存：只存JSON兼容的关系ID结果，限制大小并合并同键计算。"""
+"""进程内发布缓存：有界关系ID存储，异步协调器负责计算准入和同键等待。"""
 
 import json
 import os
 from collections import OrderedDict
 from collections.abc import Callable
-from concurrent.futures import Future, TimeoutError
 from hashlib import sha256
 from threading import Lock
 from time import monotonic
 from typing import TypeVar, cast
 
-from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
-from relationship_query.runtime.diagnostics import observe, stage
+from relationship_query.domain.path_budget import PathBudget
+from relationship_query.runtime.diagnostics import observe
 
 T = TypeVar("T")
 
@@ -32,9 +31,8 @@ class RelationCache:
             clock,
         )
         self._entries: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
-        self._pending: dict[str, Future[bytes]] = {}
         self._lock = Lock()
-        self._bytes = self.hits = self.misses = self.coalesced = 0
+        self._bytes = self.hits = self.misses = 0
         self._closed = False
 
     @classmethod
@@ -45,49 +43,33 @@ class RelationCache:
         return cls(namespace, max_bytes=maximum)
 
     def get_or_compute(self, arguments: object, budget: PathBudget, compute: Callable[[], T]) -> T:
+        cached = self.lookup(arguments, budget)
+        if cached is not None:
+            return cast(T, cached)
+        result = compute()
+        self.store(arguments, result, budget)
+        return result
+
+    def key(self, arguments: object) -> str:
+        return sha256(json.dumps([self.namespace, arguments], sort_keys=True).encode()).hexdigest()
+
+    def lookup(self, arguments: object, budget: PathBudget) -> object | None:
         budget.check()
-        key = sha256(json.dumps([self.namespace, arguments], sort_keys=True).encode()).hexdigest()
         with self._lock:
-            payload = self._get(key)
+            payload = None if self._closed else self._get(self.key(arguments))
             if payload is not None:
                 self.hits += 1
-                observe("relation_cache.hit")
-                return cast(T, self._decode(payload, budget))
-            disabled = self._closed or self.max_bytes == 0
-            pending = self._pending.get(key)
-            owner = pending is None
-            if not disabled and owner and len(self._pending) < 32:
-                pending = self._pending[key] = Future()
+            else:
                 self.misses += 1
-                observe("relation_cache.owner")
-            elif not disabled and pending is not None:
-                self.coalesced += 1
-                observe("relation_cache.follower")
-        if disabled or pending is None:
-            observe("relation_cache.bypass")
-            return compute()
-        if not owner:
-            try:
-                with stage("RelationCache.wait"):
-                    payload = pending.result(timeout=max(0, budget.deadline - budget.clock()))
-            except TimeoutError:
-                raise PathBudgetExceeded("time_limit") from None
-            budget.check()
-            return cast(T, self._decode(payload, budget))
-        try:
-            result = compute()
-            budget.check()
-            payload = json.dumps(result, separators=(",", ":")).encode()
-            with self._lock:
-                self._store(key, payload)
-            pending.set_result(payload)
-            return result
-        except BaseException as error:
-            pending.set_exception(error)
-            raise
-        finally:
-            with self._lock:
-                self._pending.pop(key, None)
+        observe("relation_cache.hit" if payload is not None else "relation_cache.miss")
+        return self._decode(payload, budget) if payload is not None else None
+
+    def store(self, arguments: object, result: object, budget: PathBudget) -> None:
+        budget.check()
+        payload = json.dumps(result, separators=(",", ":")).encode()
+        budget.check()
+        with self._lock:
+            self._store(self.key(arguments), payload)
 
     @staticmethod
     def _decode(payload: bytes, budget: PathBudget) -> object:
@@ -111,7 +93,10 @@ class RelationCache:
         size = len(key) + len(payload)
         if self._closed or size > min(self.max_bytes, 128 * 1024):
             return
-        # 键数量也有限制，字节计数外的字典和Future开销不会无限增长。
+        previous = self._entries.pop(key, None)
+        if previous is not None:
+            self._bytes -= len(key) + len(previous[1])
+        # 键数量也有限制，字节计数外的字典开销不会无限增长。
         while self._entries and (self._bytes + size > self.max_bytes or len(self._entries) >= 1024):
             old_key, (_, old_payload) = self._entries.popitem(last=False)
             self._bytes -= len(old_key) + len(old_payload)

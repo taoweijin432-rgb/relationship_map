@@ -1,6 +1,7 @@
 """统一让列表、对比、证据和导出消费图中的已物化人物关系。"""
 
 from collections import defaultdict
+from dataclasses import replace
 from hashlib import sha256
 
 from relationship_query.contracts import (
@@ -32,12 +33,83 @@ from relationship_query.services.graph import build_graph
 from relationship_query.services.graph_paths import GraphPathService
 from relationship_query.services.ports import MaterializedRelationRepository, QueryRepository
 from relationship_query.services.query import QueryError, QueryService
+from relationship_query.services.query_plan import (
+    PersonPagePlan,
+    cached_plan,
+    store_plan,
+    supplied_plan,
+)
 
 
 class MaterializedQueryService(QueryService):
     def __init__(self, repository: QueryRepository, graph: MaterializedRelationRepository) -> None:
         super().__init__(repository)
         self.graph = graph
+
+    def select_page(self, request: SearchRequest, reference_id: str | None) -> PersonPagePlan:
+        key = self.plan_key(request, reference_id)
+        cache = getattr(self.graph, "cache", None)
+        with shared_relation_budget() as budget:
+            plan = self._ready_plan(key, budget)
+            if plan is not None:
+                return plan
+            plan = super().select_page(request, reference_id)
+            if request.max_hops > 1:
+                assert reference_id is not None
+                chains = self.graph.shortest_connections(
+                    reference_id, list(plan.ids), request, budget
+                )
+                if set(chains) != set(plan.ids):
+                    raise QueryError("GRAPH_INTEGRITY", "关联候选缺少对应连接链", 503)
+                plan = replace(
+                    plan, chains=tuple((key, tuple(path)) for key, path in chains.items())
+                )
+            store_plan(cache, plan, budget)
+            return plan
+
+    def select_evidence_plan(
+        self, reference_id: str, candidate_id: str, request: SearchRequest
+    ) -> PersonPagePlan:
+        self._validate_filters(request, reference_id)
+        key = self.plan_key(request, reference_id, candidate_id)
+        cache = getattr(self.graph, "cache", None)
+        with shared_relation_budget() as budget:
+            prepared = self._ready_plan(key, budget)
+        if prepared is not None:
+            return prepared
+        chains = {}
+        if reference_id != candidate_id and self.repository.matches_background(
+            request, candidate_id
+        ):
+            with shared_relation_budget() as budget:
+                chains = self.graph.shortest_connections(
+                    reference_id, [candidate_id], request, budget
+                )
+        plan = PersonPagePlan(
+            self.repository.version,
+            self.repository.reference_month,
+            reference_id,
+            self._fingerprint(request, reference_id),
+            tuple(chains),
+            False,
+            None,
+            query_key=key,
+            chains=tuple((key, tuple(path)) for key, path in chains.items()),
+        )
+        with shared_relation_budget() as budget:
+            store_plan(cache, plan, budget)
+        return plan
+
+    def _ready_plan(self, key: str, budget: PathBudget) -> PersonPagePlan | None:
+        prepared = supplied_plan(key)
+        if prepared is not None:
+            return prepared
+        plan = cached_plan(getattr(self.graph, "cache", None), key, budget)
+        if plan is not None:
+            # 直接Service／CLI调用也保留版本契约，不依赖HTTP包装器才安全。
+            with self.graph.candidate_session(budget):
+                pass
+        return plan
 
     def search(self, request: SearchRequest, reference_id: str | None = None) -> SearchResponse:
         if request.max_hops == 1:
@@ -54,11 +126,20 @@ class MaterializedQueryService(QueryService):
                 reference = self.require_person(reference_id)
                 plan = self.select_page(request, reference_id)
                 ids = list(plan.ids)
+                chains = {key: list(path) for key, path in plan.chains or ()}
                 with self.graph.graph_session(budget) as reader:
-                    chains = reader.shortest_connections(reference_id, ids, request)
                     if set(chains) != set(ids):
                         raise QueryError("GRAPH_INTEGRITY", "关联候选缺少对应连接链", 503)
-                    details = connection_details(reader, chains, request, evidence_limit=1)
+                    details = connection_details(
+                        reader,
+                        chains,
+                        request,
+                        evidence_limit=1,
+                        verify_person_ids=(plan.probe_id,)
+                        if plan.probe_id
+                        and getattr(self.repository, "person_display", "snapshot") == "mysql-live"
+                        else (),
+                    )
                 persons = {
                     person.id: person for detail in details.values() for person in detail.persons
                 }
@@ -117,11 +198,10 @@ class MaterializedQueryService(QueryService):
         try:
             with shared_relation_budget() as budget:
                 details = {}
-                if reference_id != candidate_id and self.repository.matches_background(
-                    filters, candidate_id
-                ):
+                plan = self.select_evidence_plan(reference_id, candidate_id, filters)
+                chains = {key: list(path) for key, path in plan.chains or ()}
+                if chains:
                     with self.graph.graph_session(budget) as reader:
-                        chains = reader.shortest_connections(reference_id, [candidate_id], filters)
                         details = connection_details(reader, chains, filters)
                 detail = details.get(candidate_id)
                 budget.check()

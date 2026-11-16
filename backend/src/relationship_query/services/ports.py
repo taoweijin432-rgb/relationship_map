@@ -71,6 +71,10 @@ class MaterializedRelationReader(GraphRelationReader, Protocol):
 
 
 class MaterializedRelationRepository(Protocol):
+    def shortest_connections(
+        self, reference: str, candidates: list[str], request: SearchRequest, budget: PathBudget
+    ) -> dict[str, list[str]]: ...
+    def candidate_session(self, budget: PathBudget) -> AbstractContextManager[None]: ...
     def graph_session(
         self, budget: PathBudget
     ) -> AbstractContextManager[MaterializedRelationReader]: ...

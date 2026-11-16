@@ -19,7 +19,7 @@ class MaterializedSQLRepository(SQLRepository):
             return super().search_ids(request, None, after)
         budget = relation_query_budget()
         found: list[str] = []
-        with self.graph.candidate_session(budget), self.engine.connect() as connection:
+        with self.graph.candidate_session(budget):
             while len(found) <= request.page_size:
                 page = self.graph.neighbor_page(reference_id, request, after, budget)
                 if not page:
@@ -34,7 +34,8 @@ class MaterializedSQLRepository(SQLRepository):
                     )
                     .order_by(self.tables.people.c.id)
                 )
-                found.extend(connection.execute(statement).scalars())
+                with self.engine.connect() as connection:
+                    found.extend(connection.execute(statement).scalars())
                 budget.check()
                 if len(page) <= 128:
                     break
@@ -48,7 +49,6 @@ class MaterializedSQLRepository(SQLRepository):
             return False
         if request.max_hops == 1:
             return self.graph.connected(reference_id, candidate_id, request)
-        with self.graph.graph_session(relation_query_budget()) as reader:
-            return candidate_id in reader.shortest_connections(
-                reference_id, [candidate_id], request
-            )
+        return candidate_id in self.graph.shortest_connections(
+            reference_id, [candidate_id], request, relation_query_budget()
+        )

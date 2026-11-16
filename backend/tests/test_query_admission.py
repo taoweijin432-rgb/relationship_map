@@ -38,7 +38,8 @@ async def state(admission, name, value):
 def test_heavy_queue_bounded_and_light_execution_remains_available():
     async def scenario():
         admission = QueryAdmission()
-        heavy, lights = Blocked(), [Blocked() for _ in range(3)]
+        heavy, lights = Blocked(), [Blocked() for _ in range(2)]
+        control = Blocked()
         try:
             running = asyncio.create_task(admission.execute("heavy", heavy))
             await heavy.entered.wait()
@@ -48,10 +49,12 @@ def test_heavy_queue_bounded_and_light_execution_remains_available():
                 await admission.execute("heavy", plan)
             assert rejected.value.code == "GRAPH_BUSY"
             tasks = [asyncio.create_task(admission.execute("light", light)) for light in lights]
-            await asyncio.gather(*(light.entered.wait() for light in lights))
-            assert admission.snapshot()["light_active"] == 3
+            tasks.append(asyncio.create_task(admission.execute("control", control)))
+            await asyncio.gather(*(light.entered.wait() for light in [*lights, control]))
+            assert admission.snapshot()["light_active"] == 2
+            assert admission.snapshot()["control_active"] == 1
             assert admission.snapshot()["heavy_active"] == 1
-            for light in lights:
+            for light in [*lights, control]:
                 light.release.set()
             assert await asyncio.gather(*tasks) == [plan()] * 3
             heavy.release.set()
@@ -59,7 +62,7 @@ def test_heavy_queue_bounded_and_light_execution_remains_available():
             await state(admission, "jobs", 0)
         finally:
             heavy.release.set()
-            for light in lights:
+            for light in [*lights, control]:
                 light.release.set()
             await admission.close()
 

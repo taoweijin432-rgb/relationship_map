@@ -216,3 +216,26 @@ def test_live_release_requires_runtime_mysql_configuration(real_release, monkeyp
     with pytest.raises(ValueError, match="在线MySQL人物来源"):
         with TestClient(create_app(numeric_release_store=real_release)):
             pass
+
+
+def test_cached_id_plan_refreshes_display_and_rechecks_pagination_probe(live):
+    from relationship_query.services.query_plan import PersonPagePlan, prepared_plan
+
+    request = SearchRequest(page_size=1)
+    plan = live.service.select_page(request, None)
+    assert plan.ids == ("p:expert:1",) and plan.probe_id == "p:resume:1"
+    frozen = PersonPagePlan.from_payload(plan.payload())
+    with live.engine.begin() as connection:
+        connection.execute(
+            update(live.schema.tables["experts"]).values(name="计划复用后的实时姓名")
+        )
+    with prepared_plan(frozen):
+        result = live.service.search(request)
+    assert result.items[0].person.name == "计划复用后的实时姓名" and result.has_more
+    with live.engine.begin() as connection:
+        connection.execute(update(live.schema.tables["resume"]).values(deleted_at="2026-11-16"))
+    with prepared_plan(frozen), pytest.raises(QueryError) as changed:
+        live.service.search(request)
+    assert changed.value.code == "PERSON_SOURCE_CHANGED"
+    current = live.service.search(request)
+    assert not current.has_more and [item.person.id for item in current.items] == ["p:expert:1"]

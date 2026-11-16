@@ -144,3 +144,20 @@ def test_entry_budget_expiry_is_reported_with_request_id(client, monkeypatch, ca
     assert response.headers["X-Request-ID"] in caplog.text
     assert "test.expired" in caplog.text and "error.time_limit" in caplog.text
     assert client.get("/api/v1/health").status_code == 200
+
+
+def test_shared_usage_cannot_reset_graph_or_sql_quota():
+    with shared_relation_budget() as caller:
+        caller.graph_request(20)
+        caller.graph_result(20)
+        child = PathBudget(5000, 100, inherit_request=False)
+        child.graph_request(19990)
+        child.graph_result(19990)
+        with pytest.raises(PathBudgetExceeded, match="graph_limit"):
+            caller.absorb(child)
+    with shared_relation_budget() as caller:
+        caller.sql_steps = 200_000
+        child = PathBudget(5000, 100, inherit_request=False)
+        child.sql_steps = 350_000
+        with pytest.raises(PathBudgetExceeded, match="sql_limit"):
+            caller.absorb(child)

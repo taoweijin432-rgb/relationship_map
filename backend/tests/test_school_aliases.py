@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 
 from relationship_query.api.routes import router
+from relationship_query.app import query_runtime
 from relationship_query.contracts import SearchRequest
 from relationship_query.infrastructure.numeric_read_model import query_schema
 from relationship_query.infrastructure.sql_repository import SQLRepository
@@ -82,9 +83,21 @@ def prepared_repository(school_capture, output):
 
 def test_former_and_standard_names_return_same_entity_and_filtered_people(school_capture, tmp_path):
     with prepared_repository(school_capture, tmp_path / "release") as (repository, _):
-        app = FastAPI()
+        app = FastAPI(lifespan=query_runtime)
         app.include_router(router)
         app.state.query_service = QueryService(repository)
+        from relationship_query.infrastructure.sqlite_paths import SQLitePathRepository
+        from relationship_query.services.paths import PathService
+
+        app.state.path_service = PathService(
+            SQLitePathRepository(
+                repository.engine,
+                repository.version,
+                repository.reference_month,
+                tables=repository.tables,
+            ),
+            app.state.query_service,
+        )
         with TestClient(app) as client:
             for former, standard, identity in (
                 ("广东医学院", "广东医科大学", "school:41"),

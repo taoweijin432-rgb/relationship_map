@@ -108,6 +108,7 @@ class NumericRepository(MaterializedSQLRepository):
             f"sqlite:///file:{self.release / 'source.sqlite'}?mode=ro&uri=true",
             connect_args={"check_same_thread": False},
             poolclass=DeadlineQueuePool,
+            hide_parameters=True,
         )
         install_sql_deadlines(engine)
         schema, tables = query_schema()

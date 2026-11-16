@@ -1,3 +1,5 @@
+import logging
+import os
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -8,6 +10,18 @@ from typing import ParamSpec, TypeVar
 
 P = ParamSpec("P")
 T = TypeVar("T")
+
+
+def configure_logging() -> None:
+    level = os.environ.get("RELATIONSHIP_QUERY_LOG_LEVEL", "INFO").upper()
+    if level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        raise ValueError("无效的RELATIONSHIP_QUERY_LOG_LEVEL")
+    logger = logging.getLogger("relationship_query")
+    logger.setLevel(level)
+    if not logger.hasHandlers():
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))
+        logger.addHandler(handler)
 
 
 @dataclass
@@ -21,6 +35,7 @@ class DiagnosticTrace:
     stages: list[Stage] = field(default_factory=list)
     request_id: str = "-"
     observations: dict[str, int] = field(default_factory=dict)
+    jobs: list[tuple[str, str, str]] = field(default_factory=list)
 
     def totals(self) -> dict[str, dict[str, float | int]]:
         result: dict[str, dict[str, float | int]] = {}
@@ -47,6 +62,12 @@ def observe(name: str, count: int = 1) -> None:
     trace = _current.get()
     if trace is not None:
         trace.observations[name] = trace.observations.get(name, 0) + count
+
+
+def link_job(identity: str, cost: str, role: str) -> None:
+    trace = _current.get()
+    if trace is not None:
+        trace.jobs.append((identity, cost, role))
 
 
 def record_stage(name: str, elapsed_ms: float) -> None:
@@ -77,6 +98,7 @@ def capture(trace: DiagnosticTrace, *, include_in_parent: bool = False) -> Itera
         # HTTP自带观测不能遮住外层基准工具的采样；同一trace嵌套时不重复累计。
         if include_in_parent and parent is not None and parent is not trace:
             parent.stages.extend(trace.stages)
+            parent.jobs.extend(trace.jobs)
             for name, count in trace.observations.items():
                 parent.observations[name] = parent.observations.get(name, 0) + count
 

@@ -442,7 +442,7 @@ def test_native_export_computes_shortest_connections_once(native_chain, monkeypa
             "expected_person_ids": [item["person"]["id"] for item in page["items"]],
         },
     )
-    assert len(calls) == 1
+    assert len(calls) == (0 if cache_enabled else 1)
     assert [item["person"]["id"] for item in exported["items"]] == [
         item["person"]["id"] for item in page["items"]
     ]
@@ -555,6 +555,9 @@ def test_native_budget_and_integrity_fail_explicitly(native_chain, monkeypatch):
         raise PathBudgetExceeded("time_limit")
 
     graph = native_chain.app.state.query_service.graph
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    monkeypatch.setattr(graph, "cache", RelationCache("budget-check", max_bytes=0))
     with monkeypatch.context() as patch:
         patch.setattr(graph, "neighbor_page", exceeded)
         response = native_chain.post(
@@ -631,3 +634,95 @@ def test_uuid_four_hop_compatibility():
         )
         assert detail["connection"]["person_ids"][0] == "p:expert:1"
         assert detail["connection"]["person_ids"][-1] == candidate
+
+
+def test_native_http_same_plan_is_merged_without_blocking_worker_followers(
+    native_chain, monkeypatch
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, Lock
+    from time import monotonic, sleep
+
+    from relationship_query.runtime.relation_cache import RelationCache
+    from relationship_query.services.query_plan import supplied_plan
+
+    service = native_chain.app.state.query_service
+    monkeypatch.setattr(service.graph, "cache", RelationCache("http-shared", max_bytes=0))
+    original = service.select_page
+    started, release, lock = Event(), Event(), Lock()
+    cold = []
+
+    def selected(request, reference):
+        if supplied_plan(service.plan_key(request, reference)) is None:
+            with lock:
+                cold.append(1)
+            started.set()
+            assert release.wait(3)
+        return original(request, reference)
+
+    monkeypatch.setattr(service, "select_page", selected)
+    filters = {"max_hops": 4, "relation_type": "same_company", "page_size": 2}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        tasks = [
+            executor.submit(call, native_chain, "/persons/p:expert:1/relations/search", filters)
+        ]
+        try:
+            assert started.wait(2)
+            tasks += [
+                executor.submit(call, native_chain, "/persons/p:expert:1/relations/search", filters)
+                for _ in range(3)
+            ]
+            deadline = monotonic() + 2
+            while native_chain.app.state.admission.snapshot()["followers"] != 3:
+                assert monotonic() < deadline
+                sleep(0.005)
+        finally:
+            release.set()
+        results = [task.result(timeout=5) for task in tasks]
+    assert len(cold) == 1
+    assert all(result == results[0] for result in results)
+    assert native_chain.app.state.admission.snapshot()["followers"] == 0
+    assert service.repository.engine.pool.checkedout() == 0
+
+
+def test_native_cached_empty_page_still_verifies_graph_version(native_chain, monkeypatch):
+    from relationship_query.runtime.relation_cache import RelationCache
+    from relationship_query.services.query import QueryError
+
+    graph = native_chain.app.state.query_service.graph
+    monkeypatch.setattr(graph, "cache", RelationCache("empty-page"))
+    filters = {
+        "max_hops": 4,
+        "relation_type": "same_company",
+        "relation_organization_ids": ["company:5"],
+    }
+    assert call(native_chain, "/persons/p:expert:1/relations/search", filters)["items"] == []
+
+    def changed(_budget):
+        raise QueryError("GRAPH_VERSION_MISMATCH", "test-only", 409)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(graph.client, "check_version", changed)
+        response = native_chain.post("/api/v1/persons/p:expert:1/relations/search", json=filters)
+        assert response.status_code == 409 and response.json()["code"] == "GRAPH_VERSION_MISMATCH"
+    assert call(native_chain, "/persons/p:expert:1/relations/search", filters)["items"] == []
+
+
+def test_native_topology_calculation_does_not_hold_sql_connection(native_chain, monkeypatch):
+    from relationship_query.infrastructure.uuid_graph import MaterializedReader
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    query = native_chain.app.state.query_service
+    monkeypatch.setattr(query.graph, "cache", RelationCache("sql-lease", max_bytes=0))
+    original = MaterializedReader._shortest_connections
+    calls = []
+
+    def checked(reader, *args):
+        assert reader.sql is None
+        assert query.repository.engine.pool.checkedout() == 0
+        calls.append(1)
+        return original(reader, *args)
+
+    monkeypatch.setattr(MaterializedReader, "_shortest_connections", checked)
+    result = call(native_chain, "/persons/p:expert:1/relations/search", {"max_hops": 4})
+    assert result["items"] and calls == [1]

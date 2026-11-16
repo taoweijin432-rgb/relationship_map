@@ -37,7 +37,28 @@ git show --no-patch qa-20261113-02
 
 2026年11月16日测试服图容器已按终端反馈调整为10GiB／2CPU，当前API关系版本为`real-1e464b2951851301adc2-202611`，6711专家、14364实体、27728事实。对应x86_64部署模板为`infra/nebula/compose.test.yaml`；`infra/nebula/compose.yaml`继续作为本机ARM64实验配置。
 
-本地查询优化加入有界独占会话复用、多跳导出的连接链复用，以及按发布身份隔离的候选页／连接链缓存，服务器代码激活与该版本线上验收待执行。缓存默认8MiB、最多1024条、每条不超过128KiB、TTL300秒，仅保存图ID结果；设置`RELATIONSHIP_RELATION_CACHE_BYTES=0`可关闭缓存，配置范围0至64MiB。人物展示及删除检查继续在线查询MySQL，图版本核对保持执行。新页首次查询仍会读取图，缓存不改变背景筛选和分页顺序。
+48a1adb的有界独占会话、多跳导出连接链复用及进程内ID缓存已完成测试服激活和指定样例验收。后续连接预算、异步准入及查询复用改造已在本机分批提交，尚未部署服务器。缓存默认8MiB、最多1024条、每条不超过128KiB、TTL300秒，仅保存图ID结果；设置`RELATIONSHIP_RELATION_CACHE_BYTES=0`可关闭存储，配置范围0至64MiB。人物展示及删除检查继续在线查询MySQL，图版本核对保持执行。新页首次仍可能读取图，缓存不改变背景筛选和分页顺序。
+
+## 查询调度配置
+
+新异步入口仅支持当前单API进程部署，继续使用Uvicorn的`--workers 1`。内部受限线程和队列参数通过环境变量设置，以下是本机验证的保守起点，测试服容量仍需实测：
+
+```ini
+RELATIONSHIP_ADMISSION_WORKERS=4
+RELATIONSHIP_ADMISSION_HEAVY=1
+RELATIONSHIP_ADMISSION_LIGHT=3
+RELATIONSHIP_ADMISSION_HEAVY_QUEUE=2
+RELATIONSHIP_ADMISSION_LIGHT_QUEUE=8
+RELATIONSHIP_ADMISSION_QUEUE_SECONDS=0.3
+RELATIONSHIP_ADMISSION_INFLIGHT=16
+RELATIONSHIP_ADMISSION_FOLLOWERS_PER_KEY=4
+RELATIONSHIP_ADMISSION_FOLLOWERS=8
+RELATIONSHIP_QUERY_LOG_LEVEL=INFO
+```
+
+4个内部线程中保留1个健康／元信息通道。默认重计算最多1项、普通轻操作最多2项，健康通道最多1项；调大重计算数也不会突破总体限制。普通在途上限包括响应发送阶段，健康请求另有最多3个在途及2个等待的上限。队列满或等待超过300ms返回`503 GRAPH_BUSY`和`Retry-After: 1`，客户端应避免并行自动重试。
+
+请求体上限1MiB。调度、回源、SQL／图和装配共用入口起算5秒预算，子查询不能重新起算；路径入口仍可使用更小的业务预算并返回明确受限状态。阻塞驱动采用协作取消，HTTP超时不等于线程已停止，名额在工作实际结束后归还。启动完整核验和夜间构建不套用交互预算；退出先排空线程，再关闭SQL和图连接。日志记录请求ID、共享任务ID、阶段计时和拒绝原因，`RELATIONSHIP_QUERY_LOG_LEVEL=WARNING`可降低日志量。
 
 ## 已实现的查询与展示
 

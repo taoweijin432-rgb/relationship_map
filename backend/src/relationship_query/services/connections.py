@@ -12,8 +12,9 @@ def connection_details(
     chains: dict[str, list[str]],
     request: SearchRequest,
     evidence_limit: int = 20,
+    verify_person_ids: tuple[str, ...] = (),
 ) -> dict[str, ConnectionDetail]:
-    ids = sorted({person for chain in chains.values() for person in chain})
+    ids = sorted({person for chain in chains.values() for person in chain} | set(verify_person_ids))
     people = reader.persons(ids) if ids else {}
     if set(people) != set(ids):
         raise QueryError("GRAPH_INTEGRITY", "连接链人物在配套SQL中缺失", 503)

@@ -127,7 +127,7 @@ class UUIDGraphClient(GraphClient):
 class MaterializedReader:
     def __init__(
         self,
-        sql: PathReader,
+        sql: PathReader | None,
         client: UUIDGraphClient,
         budget: PathBudget,
         person_lookup: Callable[[list[str]], list[Person]] | None = None,
@@ -143,9 +143,13 @@ class MaterializedReader:
             people = {person.id: person for person in self.person_lookup(ids)}
             self.budget.check()
             return people
+        if self.sql is None:
+            raise RuntimeError("SQL reader required for person details")
         return self.sql.persons(ids)
 
     def fact_views_by_ids(self, ids: list[str]) -> list[FactView]:
+        if self.sql is None:
+            raise RuntimeError("SQL reader required for fact details")
         return self.sql.fact_views_by_ids(ids)
 
     def shortest_connections(
@@ -440,6 +444,15 @@ class MaterializedGraphRepository:
             raise QueryError(
                 "GRAPH_QUERY_LIMIT", f"关联人物查询达到图预算（{error.label}），请缩小范围", 503
             ) from None
+
+    def shortest_connections(
+        self, reference: str, candidates: list[str], request: SearchRequest, budget: PathBudget
+    ) -> dict[str, list[str]]:
+        # 稳定链只读图ID，不应在图引擎展开期间占用SQL连接。
+        with self.candidate_session(budget):
+            return MaterializedReader(
+                None, self.client, budget, cache=self.cache
+            ).shortest_connections(reference, candidates, request)
 
     def neighbor_page(
         self,

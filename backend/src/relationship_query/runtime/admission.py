@@ -22,14 +22,21 @@ from relationship_query.domain.path_budget import (
 from relationship_query.runtime.diagnostics import (
     DiagnosticTrace,
     capture,
+    link_job,
     observe,
     record_stage,
     request_id,
 )
+from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
-from relationship_query.services.query_plan import PersonPagePlan
+from relationship_query.services.query_plan import (
+    PLAN_CACHE_FORMAT,
+    PersonPagePlan,
+    cached_plan,
+    store_plan,
+)
 
-Cost = Literal["heavy", "light"]
+Cost = Literal["heavy", "light", "control"]
 T = TypeVar("T")
 logger = logging.getLogger("relationship_query.admission")
 
@@ -97,32 +104,47 @@ class QueryAdmission:
             max_workers=self.limits.workers, thread_name_prefix="relationship-query"
         )
         self._condition = asyncio.Condition()
-        self._queues: dict[Cost, deque[object]] = {"heavy": deque(), "light": deque()}
-        self._active: dict[Cost, int] = {"heavy": 0, "light": 0}
+        self._queues: dict[Cost, deque[object]] = {
+            "heavy": deque(),
+            "light": deque(),
+            "control": deque(),
+        }
+        self._active: dict[Cost, int] = {"heavy": 0, "light": 0, "control": 0}
         self._jobs: dict[str, _Job] = {}
         self._flights: dict[str, _Flight] = {}
         self._followers = self._inflight = 0
+        self._control_inflight = 0
         self._closed = False
 
     @asynccontextmanager
-    async def request(self) -> AsyncIterator[None]:
-        if self._closed or self._inflight >= self.limits.inflight:
+    async def request(self, *, protected: bool = False) -> AsyncIterator[None]:
+        full = self._control_inflight >= 3 if protected else self._inflight >= self.limits.inflight
+        if self._closed or full:
             observe("admission.request_rejected")
             raise busy()
-        self._inflight += 1
+        if protected:
+            self._control_inflight += 1
+        else:
+            self._inflight += 1
         try:
             yield
         finally:
-            self._inflight -= 1
+            if protected:
+                self._control_inflight -= 1
+            else:
+                self._inflight -= 1
 
     def snapshot(self) -> dict[str, int]:
         return {
             "inflight": self._inflight,
+            "control_inflight": self._control_inflight,
             "followers": self._followers,
             "heavy_active": self._active["heavy"],
             "light_active": self._active["light"],
+            "control_active": self._active["control"],
             "heavy_waiting": len(self._queues["heavy"]),
             "light_waiting": len(self._queues["light"]),
+            "control_waiting": len(self._queues["control"]),
             "jobs": len(self._jobs),
             "flights": len(self._flights),
         }
@@ -136,17 +158,31 @@ class QueryAdmission:
             self._cancel(job)
             raise
 
-    async def page_plan(self, key: str, operation: Callable[[], PersonPagePlan]) -> PersonPagePlan:
+    async def page_plan(
+        self, key: str, operation: Callable[[], PersonPagePlan], cache: RelationCache | None = None
+    ) -> PersonPagePlan:
         """只合并ID计划，完成即移除；存储复用仍由已有RelationCache负责。"""
         if self._closed:
             raise busy()
         caller = current_query_budget() or PathBudget(5000, 5000)
         caller.check()
-        flight = self._flights.get(key)
+        arguments = [PLAN_CACHE_FORMAT, key]
+        ready = cached_plan(cache, key, caller)
+        if ready is not None:
+            observe("admission.plan_cached")
+            return ready
+        flight_key = cache.key(arguments) if cache is not None else key
+        flight = self._flights.get(flight_key)
         follower = flight is not None
         if flight is None:
             budget = PathBudget(5000, 5000, inherit_request=False)
-            flight = self._flights[key] = _Flight(self._start("heavy", operation, budget))
+
+            def compute() -> PersonPagePlan:
+                result = cached_plan(cache, key, budget) or operation()
+                store_plan(cache, result, budget)
+                return result
+
+            flight = self._flights[flight_key] = _Flight(self._start("heavy", compute, budget))
         elif (
             flight.waiters == 0
             or flight.followers >= self.limits.followers_per_key
@@ -160,9 +196,10 @@ class QueryAdmission:
         flight.waiters += 1
         observe("admission.plan_follower" if follower else "admission.plan_owner")
         try:
-            result = await self._wait(flight.job, caller)
+            result = await self._wait(flight.job, caller, "follower" if follower else "owner")
             if not isinstance(result, PersonPagePlan):
                 raise TypeError("共享计算必须返回人物ID计划")
+            caller.absorb(flight.job.budget)
             return result
         finally:
             flight.waiters -= 1
@@ -173,10 +210,11 @@ class QueryAdmission:
                 if flight.job.task is not None and not flight.job.task.done():
                     self._cancel(flight.job)
                 else:
-                    self._flights.pop(key, None)
+                    self._flights.pop(flight_key, None)
 
     def _start(self, cost: Cost, operation: Callable[[], T], budget: PathBudget) -> _Job:
-        if self._closed or len(self._jobs) >= self.limits.inflight:
+        maximum = self.limits.inflight + (3 if cost == "control" else 0)
+        if self._closed or len(self._jobs) >= maximum:
             raise busy()
         budget.check()
         job = _Job(budget, cost)
@@ -185,8 +223,9 @@ class QueryAdmission:
         job.task.add_done_callback(lambda task: self._finished(job, task))
         return job
 
-    async def _wait(self, job: _Job, budget: PathBudget) -> Any:
+    async def _wait(self, job: _Job, budget: PathBudget, role: str = "execution") -> Any:
         assert job.task is not None
+        link_job(job.identity, job.cost, role)
         budget.check()
         timeout = asyncio.timeout(max(0, budget.deadline - budget.clock()))
         try:
@@ -259,7 +298,11 @@ class QueryAdmission:
     async def _acquire(self, job: _Job) -> None:
         ticket = object()
         queue = self._queues[job.cost]
-        maximum = self.limits.heavy_queue if job.cost == "heavy" else self.limits.light_queue
+        maximum = {
+            "heavy": self.limits.heavy_queue,
+            "light": self.limits.light_queue,
+            "control": 2,
+        }[job.cost]
         started = perf_counter()
         async with self._condition:
             if not queue and self._available(job.cost):
@@ -288,8 +331,11 @@ class QueryAdmission:
                 self._condition.notify_all()
 
     def _available(self, cost: Cost) -> bool:
-        limit = self.limits.heavy if cost == "heavy" else self.limits.light
-        return self._active[cost] < limit and sum(self._active.values()) < self.limits.workers
+        if cost == "control":
+            return self._active[cost] < 1 and sum(self._active.values()) < self.limits.workers
+        limit = self.limits.heavy if cost == "heavy" else max(1, self.limits.light - 1)
+        regular = self._active["heavy"] + self._active["light"]
+        return self._active[cost] < limit and regular < self.limits.workers - 1
 
     async def close(self) -> None:
         self._closed = True
