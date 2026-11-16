@@ -28,6 +28,7 @@ from relationship_query.runtime.diagnostics import traced
 from relationship_query.services.evidence import build_evidence
 from relationship_query.services.graph import build_graph
 from relationship_query.services.ports import QueryRepository
+from relationship_query.services.query_plan import DirectPage, PersonPagePlan
 
 
 class QueryError(Exception):
@@ -99,26 +100,66 @@ class QueryService:
 
     @traced("QueryService.search")
     def search(self, request: SearchRequest, reference_id: str | None = None) -> SearchResponse:
-        reference = self.require_person(reference_id) if reference_id else None
+        return self._direct_page(request, reference_id).response
+
+    @traced("QueryService.select_page")
+    def select_page(self, request: SearchRequest, reference_id: str | None) -> PersonPagePlan:
+        """选择与展示分离；计划仅含ID和分页状态，人物有效性仍需在线核对。"""
         self._validate_filters(request, reference_id)
         fingerprint = self._fingerprint(request, reference_id)
         after = self._decode_cursor(request.cursor, fingerprint) if request.cursor else None
-        found_ids = self.repository.search_ids(request, reference_id, after)
-        has_more = len(found_ids) > request.page_size
-        ids = found_ids[: request.page_size]
+        found = self.repository.search_ids(request, reference_id, after)
+        ids, has_more = found[: request.page_size], len(found) > request.page_size
+        return PersonPagePlan(
+            self.repository.version,
+            self.repository.reference_month,
+            reference_id,
+            fingerprint,
+            tuple(ids),
+            has_more,
+            self._encode_cursor(ids[-1], fingerprint) if has_more else None,
+        )
+
+    def _direct_page(self, request: SearchRequest, reference_id: str | None) -> DirectPage:
+        reference = self.require_person(reference_id) if reference_id else None
+        plan = self.select_page(request, reference_id)
+        ids = list(plan.ids)
         persons = sorted(self.repository.persons(ids), key=lambda p: p.id)
         views = self.repository.fact_views(ids + ([reference_id] if reference_id else []))
-        items, graph_views = self._assemble(persons, views, request, reference_id)
+        proofs = (
+            self._proofs([(reference_id, p.id) for p in persons], views, request)
+            if reference_id
+            else {}
+        )
+        items, graph_views = self._assemble(persons, views, request, reference_id, proofs)
         graph_persons = ([reference] if reference else []) + persons
-        return SearchResponse(
+        response = SearchResponse(
             **self.metadata(),
             applied_filters=request,
             items=items,
             reference=reference,
-            has_more=has_more,
-            next_cursor=self._encode_cursor(ids[-1], fingerprint) if has_more else None,
+            has_more=plan.has_more,
+            next_cursor=plan.next_cursor,
             graph=build_graph(graph_persons, graph_views, reference_id),
         )
+        return DirectPage(response, views, graph_views, proofs)
+
+    def _proofs(
+        self, pairs: list[tuple[str, str]], views: list[FactView], scope: RelationScope
+    ) -> dict[tuple[str, str], list[Evidence]]:
+        by_person: dict[str, list[FactView]] = defaultdict(list)
+        for view in views:
+            by_person[view.fact.person_id].append(view)
+        return {
+            pair: self._build_evidence(
+                by_person[pair[0]],
+                by_person[pair[1]],
+                self.repository.reference_month,
+                scope.relation_type,
+                scope,
+            )
+            for pair in pairs
+        }
 
     @traced("QueryService.assemble")
     def _assemble(
@@ -127,23 +168,16 @@ class QueryService:
         views: list[FactView],
         request: SearchRequest,
         reference_id: str | None,
+        evidence: dict[tuple[str, str], list[Evidence]] | None = None,
     ) -> tuple[list[PersonItem], list[FactView]]:
         if reference_id is None:
             return [PersonItem(person=p) for p in persons], views
-        by_person: dict[str, list[FactView]] = defaultdict(list)
-        for view in views:
-            by_person[view.fact.person_id].append(view)
+        if evidence is None:
+            evidence = self._proofs([(reference_id, p.id) for p in persons], views, request)
         items, graph_views = [], {}
         for person in persons:
-            evidence = self._build_evidence(
-                by_person[reference_id],
-                by_person[person.id],
-                self.repository.reference_month,
-                request.relation_type,
-                request,
-            )
             summaries: dict[tuple[str, str], RelationSummary] = {}
-            for ev in evidence:
+            for ev in evidence.get((reference_id, person.id), []):
                 summaries[(ev.relation_type, ev.entity.id)] = RelationSummary(
                     type=ev.relation_type,
                     label=ev.label,
@@ -200,25 +234,19 @@ class QueryService:
     def export_page(self, request: ExportRequest) -> ExportResponse:
         if request.data_version != self.repository.version:
             raise QueryError("STALE_EXPORT", "数据版本已变化，请重新查询后导出", 409)
-        result = self.search(request.filters, request.reference_id)
+        page = self._direct_page(request.filters, request.reference_id)
+        result = page.response
         ids = [item.person.id for item in result.items]
         if ids != request.expected_person_ids:
             raise QueryError("STALE_EXPORT", "当前页人物已变化，请重新查询后导出", 409)
-        all_ids = ids + ([request.reference_id] if request.reference_id else [])
         views: dict[str, list[FactView]] = defaultdict(list)
-        for view in self.repository.fact_views(all_ids):
+        for view in page.facts:
             views[view.fact.person_id].append(view)
         items = [
             ExportItem(
                 **item.model_dump(),
                 facts=views[item.person.id],
-                evidence=self._build_evidence(
-                    views[request.reference_id],
-                    views[item.person.id],
-                    self.repository.reference_month,
-                    request.filters.relation_type,
-                    request.filters,
-                )
+                evidence=page.evidence.get((request.reference_id, item.person.id), [])
                 if request.reference_id
                 else [],
             )
@@ -239,16 +267,18 @@ class QueryService:
     @traced("QueryService.expand")
     def expand(self, request: ExpandRequest) -> ExpandResponse:
         filters = request.filters.model_copy(update={"page_size": 20, "cursor": None})
-        result = self.search(filters, request.person_id)
-        ids = [item.person.id for item in result.items] + [request.person_id]
-        views = self.repository.fact_views(ids)
-        _, graph_views = self._assemble(
-            [i.person for i in result.items], views, filters, request.person_id
+        page = self._direct_page(filters, request.person_id)
+        result = page.response
+        # 保留原展开流程的最后一次在线中心有效性检查。
+        root = (
+            self.require_person(request.person_id)
+            if getattr(self.repository, "person_display", "snapshot") == "mysql-live"
+            else result.reference
         )
-        root = self.require_person(request.person_id)
+        assert root is not None
         graph = build_graph(
             [root, *[i.person for i in result.items]],
-            graph_views,
+            page.graph_facts,
             request.person_id,
             request.existing_node_ids,
             request.existing_edge_ids,

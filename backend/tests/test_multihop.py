@@ -413,9 +413,7 @@ def test_native_shortest_tie_detail_export_expand_and_filters(native_chain):
 
 
 @pytest.mark.parametrize("cache_enabled", [False, True])
-def test_native_export_computes_shortest_connections_once(
-    native_chain, monkeypatch, cache_enabled
-):
+def test_native_export_computes_shortest_connections_once(native_chain, monkeypatch, cache_enabled):
     from relationship_query.infrastructure.uuid_graph import MaterializedReader
     from relationship_query.runtime.relation_cache import RelationCache
 
@@ -452,6 +450,101 @@ def test_native_export_computes_shortest_connections_once(
         item["relations"] for item in page["items"]
     ]
     assert all(item["connection_detail"]["segments"] for item in exported["items"])
+
+
+@pytest.mark.parametrize("cache_enabled", [False, True])
+@pytest.mark.parametrize("operation", ["export", "expand"])
+def test_native_direct_page_does_not_repeat_proof_or_fact_reads(
+    native_chain, monkeypatch, cache_enabled, operation
+):
+    from unittest.mock import patch
+
+    from relationship_query.infrastructure.uuid_graph import MaterializedReader
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    service = native_chain.app.state.query_service
+    monkeypatch.setattr(
+        service.graph,
+        "cache",
+        RelationCache("direct-reuse", max_bytes=8192 if cache_enabled else 0),
+    )
+    filters = {"relation_type": "same_company", "page_size": 20}
+    page = call(native_chain, "/persons/p:expert:1/relations/search", filters)
+    calls = []
+    original = MaterializedReader.read_proofs
+
+    def record(self, *args, **kwargs):
+        calls.append(args)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(MaterializedReader, "read_proofs", record)
+    with patch.object(
+        service.repository, "fact_views", wraps=service.repository.fact_views
+    ) as facts:
+        if operation == "export":
+            result = call(
+                native_chain,
+                "/exports/persons",
+                {
+                    "reference_id": "p:expert:1",
+                    "filters": filters,
+                    "data_version": page["data_version"],
+                    "expected_person_ids": [item["person"]["id"] for item in page["items"]],
+                },
+            )
+            for item in result["items"]:
+                assert item["evidence"]
+                assert item["relations"] == next(
+                    row["relations"]
+                    for row in page["items"]
+                    if row["person"]["id"] == item["person"]["id"]
+                )
+        else:
+            result = call(
+                native_chain,
+                "/graph/expand",
+                {
+                    "person_id": "p:expert:1",
+                    "filters": filters,
+                },
+            )
+            assert result["graph"] == page["graph"]
+    assert len(calls) == facts.call_count == 1
+
+
+@pytest.mark.parametrize("cache_enabled", [False, True])
+@pytest.mark.parametrize("background", [{}, {"source": "resume"}])
+def test_native_multihop_evidence_resolves_chain_once(
+    native_chain, monkeypatch, cache_enabled, background
+):
+    from relationship_query.infrastructure.uuid_graph import MaterializedReader
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    service = native_chain.app.state.query_service
+    monkeypatch.setattr(
+        service.graph,
+        "cache",
+        RelationCache("evidence-reuse", max_bytes=8192 if cache_enabled else 0),
+    )
+    original = MaterializedReader.shortest_connections
+    calls = []
+
+    def record(self, *args, **kwargs):
+        calls.append(args)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(MaterializedReader, "shortest_connections", record)
+    result = call(
+        native_chain,
+        "/relations/evidence/search",
+        {
+            "reference_id": "p:expert:1",
+            "candidate_id": "p:expert:3",
+            "filters": {"max_hops": 4, "relation_type": "same_company", **background},
+        },
+    )
+    assert len(calls) == (0 if background else 1)
+    assert (result["connection"] is None) == bool(background)
 
 
 def test_native_budget_and_integrity_fail_explicitly(native_chain, monkeypatch):

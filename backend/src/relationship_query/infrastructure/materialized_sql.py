@@ -44,18 +44,7 @@ class MaterializedSQLRepository(SQLRepository):
     def matches_person(self, request: SearchRequest, reference_id: str, candidate_id: str) -> bool:
         if reference_id == candidate_id:
             return False
-        with self.engine.connect() as connection:
-            matched = (
-                connection.scalar(
-                    select(self.tables.people.c.id).where(
-                        self.tables.people.c.id == candidate_id,
-                        self.tables.people.c.active.is_(True),
-                        *self._filter_conditions(request),
-                    )
-                )
-                is not None
-            )
-        if not matched:
+        if not self.matches_background(request, candidate_id):
             return False
         if request.max_hops == 1:
             return self.graph.connected(reference_id, candidate_id, request)

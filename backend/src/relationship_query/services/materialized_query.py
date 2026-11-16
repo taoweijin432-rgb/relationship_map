@@ -20,7 +20,7 @@ from relationship_query.contracts import (
     SearchRequest,
     SearchResponse,
 )
-from relationship_query.domain.models import Person, RelationType
+from relationship_query.domain.models import RelationType
 from relationship_query.domain.path_budget import (
     PathBudget,
     PathBudgetExceeded,
@@ -52,10 +52,8 @@ class MaterializedQueryService(QueryService):
         try:
             with shared_relation_budget() as budget:
                 reference = self.require_person(reference_id)
-                fingerprint = self._fingerprint(request, reference_id)
-                after = self._decode_cursor(request.cursor, fingerprint) if request.cursor else None
-                found = self.repository.search_ids(request, reference_id, after)
-                ids = found[: request.page_size]
+                plan = self.select_page(request, reference_id)
+                ids = list(plan.ids)
                 with self.graph.graph_session(budget) as reader:
                     chains = reader.shortest_connections(reference_id, ids, request)
                     if set(chains) != set(ids):
@@ -97,10 +95,8 @@ class MaterializedQueryService(QueryService):
                     applied_filters=request,
                     reference=reference,
                     items=items,
-                    has_more=len(found) > request.page_size,
-                    next_cursor=self._encode_cursor(ids[-1], fingerprint)
-                    if len(found) > request.page_size
-                    else None,
+                    has_more=plan.has_more,
+                    next_cursor=plan.next_cursor,
                     graph=build_graph(
                         [reference, *persons.values()], list(views.values()), reference_id
                     ),
@@ -121,7 +117,9 @@ class MaterializedQueryService(QueryService):
         try:
             with shared_relation_budget() as budget:
                 details = {}
-                if self.repository.matches_person(filters, reference_id, candidate_id):
+                if reference_id != candidate_id and self.repository.matches_background(
+                    filters, candidate_id
+                ):
                     with self.graph.graph_session(budget) as reader:
                         chains = reader.shortest_connections(reference_id, [candidate_id], filters)
                         details = connection_details(reader, chains, filters)
@@ -287,30 +285,3 @@ class MaterializedQueryService(QueryService):
             return []
         scope = filters or RelationScope(relation_type=kind)
         return self._proofs([pair], left + right, scope).get(pair, [])
-
-    def _assemble(
-        self,
-        persons: list[Person],
-        views: list[FactView],
-        request: SearchRequest,
-        reference_id: str | None,
-    ) -> tuple[list[PersonItem], list[FactView]]:
-        if reference_id is None:
-            return super()._assemble(persons, views, request, reference_id)
-        evidence = self._proofs([(reference_id, p.id) for p in persons], views, request)
-        items, graph_views = [], {}
-        for person in persons:
-            summaries = {}
-            for ev in evidence.get((reference_id, person.id), []):
-                summaries[(ev.relation_type, ev.entity.id)] = RelationSummary(
-                    type=ev.relation_type,
-                    label=ev.label,
-                    entity_name=ev.entity.name,
-                    evidence_id=ev.id,
-                )
-                graph_views[ev.reference.fact.id], graph_views[ev.candidate.fact.id] = (
-                    ev.reference,
-                    ev.candidate,
-                )
-            items.append(PersonItem(person=person, relations=list(summaries.values())))
-        return items, list(graph_views.values())

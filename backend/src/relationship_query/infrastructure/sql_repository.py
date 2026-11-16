@@ -171,6 +171,20 @@ class SQLRepository:
                 is not None
             )
 
+    @traced("SQLRepository.matches_background")
+    def matches_background(self, request: SearchRequest, person_id: str) -> bool:
+        with self.engine.connect() as connection:
+            return (
+                connection.scalar(
+                    select(self.tables.people.c.id).where(
+                        self.tables.people.c.id == person_id,
+                        self.tables.people.c.active.is_(True),
+                        *self._filter_conditions(request),
+                    )
+                )
+                is not None
+            )
+
     def _search_conditions(
         self, request: SearchRequest, reference_id: str | None
     ) -> list[ColumnElement[bool]]:
