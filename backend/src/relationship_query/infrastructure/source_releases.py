@@ -93,6 +93,7 @@ def verify_bundle(directory: Path) -> SourceBundle:
             raise ValueError("候选配置在校验期间变化，拒绝激活")
         return bundle
     engine = open_projection_engine(bundle.mysql_url)
+    client = None
     try:
         repository = SourceRepository(engine, bundle.manifest)
         with engine.connect() as connection:
@@ -104,6 +105,8 @@ def verify_bundle(directory: Path) -> SourceBundle:
             raise ValueError("候选配置在校验期间变化，拒绝激活")
         return bundle
     finally:
+        if client is not None:
+            client.close()
         engine.dispose()
 
 

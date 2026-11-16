@@ -175,7 +175,11 @@ def test_http_metadata_and_person_routes_use_live_repository(live, monkeypatch):
     monkeypatch.setenv("RELATIONSHIP_MYSQL_SOURCE_CONFIG", "test-only")
     monkeypatch.setattr(live_people, "open_people_engine", lambda *args: live.engine)
     monkeypatch.setattr(MySQLPeople, "check", lambda *args: None)
-    monkeypatch.setattr(LiveRealGraphRepository, "graph_repository", lambda self: SimpleNamespace())
+    monkeypatch.setattr(
+        LiveRealGraphRepository,
+        "graph_repository",
+        lambda self: SimpleNamespace(client=SimpleNamespace(close=lambda: None)),
+    )
     from relationship_query.update.source_config import MySQLSourceConfig, legacy_source_config
 
     monkeypatch.setattr(MySQLSourceConfig, "read", lambda path: legacy_source_config("source"))

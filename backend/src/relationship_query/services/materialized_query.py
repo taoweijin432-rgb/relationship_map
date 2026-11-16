@@ -42,6 +42,11 @@ class MaterializedQueryService(QueryService):
     def search(self, request: SearchRequest, reference_id: str | None = None) -> SearchResponse:
         if request.max_hops == 1:
             return super().search(request, reference_id)
+        return self._search_page(request, reference_id)[0]
+
+    def _search_page(
+        self, request: SearchRequest, reference_id: str | None
+    ) -> tuple[SearchResponse, dict[str, list[str]]]:
         self._validate_filters(request, reference_id)
         assert reference_id is not None
         try:
@@ -87,7 +92,7 @@ class MaterializedQueryService(QueryService):
                     for person in ids
                 ]
                 budget.check()
-                return SearchResponse(
+                response = SearchResponse(
                     **self.metadata(),
                     applied_filters=request,
                     reference=reference,
@@ -100,6 +105,7 @@ class MaterializedQueryService(QueryService):
                         [reference, *persons.values()], list(views.values()), reference_id
                     ),
                 )
+                return response, chains
         except PathBudgetExceeded as error:
             raise QueryError(
                 "GRAPH_QUERY_LIMIT", f"多跳查询达到预算（{error.label}），请降低跳数或缩小范围", 503
@@ -140,16 +146,14 @@ class MaterializedQueryService(QueryService):
             raise QueryError("STALE_EXPORT", "数据版本已变化，请重新查询后导出", 409)
         try:
             with shared_relation_budget() as budget:
-                result = self.search(request.filters, request.reference_id)
+                result, chains = self._search_page(request.filters, request.reference_id)
                 ids = [item.person.id for item in result.items]
                 if ids != request.expected_person_ids:
                     raise QueryError("STALE_EXPORT", "当前页人物已变化，请重新查询后导出", 409)
-                assert request.reference_id is not None
+                # 列表只取精简证据，其首条排序不能用完整导出证据的首条替代。
+                # 复用已核验的链，不再执行第二轮多跳最短链计算。
                 with self.graph.graph_session(budget) as reader:
-                    chains = reader.shortest_connections(request.reference_id, ids, request.filters)
                     details = connection_details(reader, chains, request.filters)
-                    if set(details) != set(ids):
-                        raise QueryError("GRAPH_INTEGRITY", "导出人物缺少对应连接链", 503)
                 views: dict[str, list[FactView]] = defaultdict(list)
                 for view in self.repository.fact_views(ids):
                     views[view.fact.person_id].append(view)

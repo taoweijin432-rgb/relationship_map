@@ -11,7 +11,6 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
 from time import monotonic, perf_counter, sleep
-from types import SimpleNamespace
 from typing import Any, cast
 from uuid import uuid4
 
@@ -24,11 +23,15 @@ from mysql_update_dataset import (
     make_dataset,
 )
 from projection_source_lab import raw_statements
+from remote_mysql_lab import IMAGE, command
+from update_program_lab import cleanup, reader_session
+
 from relationship_query.contracts import PathRequest
 from relationship_query.domain.path_budget import PathBudget
 from relationship_query.infrastructure.graph_client import GraphClient
 from relationship_query.infrastructure.graph_model import read_reader
 from relationship_query.infrastructure.nebula_lab import DEFAULT_CREDENTIALS, query
+from relationship_query.infrastructure.numeric_api import NumericGraphClient, NumericManifest
 from relationship_query.infrastructure.uuid_graph import MaterializedReader
 from relationship_query.infrastructure.uuid_projection import read_all
 from relationship_query.update.artifacts import artifact_directory, write_json
@@ -39,8 +42,6 @@ from relationship_query.update.projection import NumericProjectionAdapter
 from relationship_query.update.service import UpdateProgram
 from relationship_query.update.store import UpdateStore
 from relationship_query.update.target import NebulaTarget
-from remote_mysql_lab import IMAGE, command
-from update_program_lab import cleanup, reader_session
 
 ROOT = Path(__file__).resolve().parents[1]
 TABLES = (
@@ -254,32 +255,38 @@ def verify_graph(
     for node in nodes:
         if node["type"] == "person":
             assert set(node["properties"]) == {"serial_number", "source_system"}
-    client = GraphClient(
-        cast(Any, SimpleNamespace(space=manifest["graph"]["space"])), read_reader(path)
+    projection = NumericManifest(
+        space=manifest["graph"]["space"],
+        projection_id=manifest["version"],
+        data_version=manifest["version"],
+        reference_month=manifest["reference_month"],
+        source_digest=manifest["source_digest"],
+        counts={},
     )
     path_results = []
-    for case in cases:
-        direct = sorted(
-            {
-                edge["type"]
-                for edge in actual
-                if {edge["source"], edge["target"]} == {case["left"], case["right"]}
-            }
-        )
-        assert direct == case["direct"], case
-        request = PathRequest(reference_id=case["left"], candidate_id=case["right"])
-        budget = PathBudget(3000, 5000)
-        graph = MaterializedReader(cast(Any, None), cast(Any, client), budget)
-        middle = sorted(graph.paths(request))
-        assert middle == case["middle"], (case, middle)
-        reverse = PathRequest(reference_id=case["right"], candidate_id=case["left"])
-        reverse_reader = MaterializedReader(
-            cast(Any, None), cast(Any, client), PathBudget(3000, 5000)
-        )
-        assert sorted(reverse_reader.paths(reverse)) == middle
-        path_results.append({**case, "verified": True, "reverse_verified": True})
-    if cases:
-        verify_path_scopes(client, cases)
+    with closing(NumericGraphClient(projection, read_reader(path))) as client:
+        for case in cases:
+            direct = sorted(
+                {
+                    edge["type"]
+                    for edge in actual
+                    if {edge["source"], edge["target"]} == {case["left"], case["right"]}
+                }
+            )
+            assert direct == case["direct"], case
+            request = PathRequest(reference_id=case["left"], candidate_id=case["right"])
+            budget = PathBudget(3000, 5000)
+            graph = MaterializedReader(cast(Any, None), cast(Any, client), budget)
+            middle = sorted(graph.paths(request))
+            assert middle == case["middle"], (case, middle)
+            reverse = PathRequest(reference_id=case["right"], candidate_id=case["left"])
+            reverse_reader = MaterializedReader(
+                cast(Any, None), cast(Any, client), PathBudget(3000, 5000)
+            )
+            assert sorted(reverse_reader.paths(reverse)) == middle
+            path_results.append({**case, "verified": True, "reverse_verified": True})
+        if cases:
+            verify_path_scopes(client, cases)
     return {
         "space": manifest["graph"]["space"],
         "to_seq": manifest["to_seq"],

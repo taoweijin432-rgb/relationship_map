@@ -16,6 +16,7 @@ from relationship_query.infrastructure.mysql import MySQLPathRepository
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.uuid_api import UUIDRepository
 from relationship_query.infrastructure.uuid_projection import meta_properties
+from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.ports import PathReader, PathRepository
 from relationship_query.services.query import QueryError
 
@@ -31,6 +32,13 @@ FACTS = {
     "same_school": "studied_at",
     "same_major": "studied_major",
 }
+
+
+def relation_scope_key(scope: RelationScope) -> dict:
+    return {
+        **scope.model_dump(include=set(RelationScope.model_fields)),
+        "max_hops": getattr(scope, "max_hops", 1),
+    }
 
 
 def kinds(scope: RelationScope) -> list[str]:
@@ -123,9 +131,11 @@ class MaterializedReader:
         client: UUIDGraphClient,
         budget: PathBudget,
         person_lookup: Callable[[list[str]], list[Person]] | None = None,
+        cache: RelationCache | None = None,
     ) -> None:
         self.sql, self.client, self.budget = sql, client, budget
         self.person_lookup = person_lookup
+        self.cache = cache
 
     def persons(self, ids: list[str]) -> dict[str, Person]:
         if self.person_lookup is not None:
@@ -139,6 +149,17 @@ class MaterializedReader:
         return self.sql.fact_views_by_ids(ids)
 
     def shortest_connections(
+        self, reference: str, candidates: list[str], request: SearchRequest
+    ) -> dict[str, list[str]]:
+        if self.cache is None:
+            return self._shortest_connections(reference, candidates, request)
+        return self.cache.get_or_compute(
+            ["chains", reference, sorted(candidates), relation_scope_key(request)],
+            self.budget,
+            lambda: self._shortest_connections(reference, candidates, request),
+        )
+
+    def _shortest_connections(
         self, reference: str, candidates: list[str], request: SearchRequest
     ) -> dict[str, list[str]]:
         found: dict[str, list[str]] = {}
@@ -391,6 +412,7 @@ class MaterializedGraphRepository:
         self.source, self.manifest = source, client.manifest
         self.version, self.reference_month = source.version, source.reference_month
         self.sql, self.client = sql, client
+        self.cache = client.relation_cache
         self.client.check_version(PathBudget(3000, 5000))
 
     def session(self, budget: PathBudget) -> AbstractContextManager[PathReader]:
@@ -405,7 +427,7 @@ class MaterializedGraphRepository:
                 if getattr(self.source, "person_display", "") == "mysql-live"
                 else None
             )
-            yield MaterializedReader(sql, self.client, budget, lookup)
+            yield MaterializedReader(sql, self.client, budget, lookup, self.cache)
             self.client.check_version(budget)
 
     @contextmanager
@@ -426,6 +448,20 @@ class MaterializedGraphRepository:
         after: str | None,
         budget: PathBudget,
         size: int = 128,
+    ) -> list[str]:
+        return self.cache.get_or_compute(
+            ["neighbors", reference, relation_scope_key(scope), after, size],
+            budget,
+            lambda: self._neighbor_page(reference, scope, after, budget, size),
+        )
+
+    def _neighbor_page(
+        self,
+        reference: str,
+        scope: RelationScope,
+        after: str | None,
+        budget: PathBudget,
+        size: int,
     ) -> list[str]:
         if isinstance(scope, SearchRequest) and scope.max_hops > 1:
             if not scope.require_same_school:
@@ -515,4 +551,8 @@ class UUIDGraphRepository(MaterializedGraphRepository):
             verify=source.verify_connection,
         )
         client = UUIDGraphClient(source.manifest, read_reader(manifest_path))
-        super().__init__(source, sql, client)
+        try:
+            super().__init__(source, sql, client)
+        except BaseException:
+            client.close()
+            raise

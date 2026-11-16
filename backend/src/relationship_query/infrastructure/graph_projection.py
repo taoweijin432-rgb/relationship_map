@@ -396,11 +396,14 @@ def _project(
 def _wait_reader(manifest: ProjectionManifest, credentials: ReaderCredentials) -> None:
     deadline = monotonic() + 60
     client = GraphClient(manifest, credentials)
-    while True:
-        try:
-            client.check_version(PathBudget(3000, 5000))
-            return
-        except GraphDependencyError:
-            if monotonic() >= deadline:
-                raise
-            sleep(1)
+    try:
+        while True:
+            try:
+                client.check_version(PathBudget(3000, 5000))
+                return
+            except GraphDependencyError:
+                if monotonic() >= deadline:
+                    raise
+                sleep(1)
+    finally:
+        client.close()

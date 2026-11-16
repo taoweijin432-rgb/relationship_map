@@ -53,6 +53,7 @@ def run(source: Path, output: Path, reference_month: int) -> dict:
     )
     url = source_url(source / "source.env")
     engine = open_projection_engine(url)
+    client = None
     try:
         repository = SourceRepository(engine, manifest)
         from relationship_query.infrastructure.source_read_model import snapshot
@@ -67,6 +68,8 @@ def run(source: Path, output: Path, reference_month: int) -> dict:
         verify_graph(client, nodes, edges)
         repository.verify_snapshot()
     finally:
+        if client is not None:
+            client.close()
         engine.dispose()
     output.mkdir(parents=True, exist_ok=False)
     credentials = output / "reader-credentials.json"

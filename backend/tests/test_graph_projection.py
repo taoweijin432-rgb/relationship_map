@@ -222,11 +222,18 @@ def test_transport_errors_release_resources_and_do_not_become_no_relationship(
     from pydantic import SecretStr
 
     import relationship_query.infrastructure.graph_client as transport
+    import relationship_query.infrastructure.graph_sessions as sessions
 
     events = []
 
     class Session:
-        def execute(self, _statement):
+        def __init__(self, _credentials, _budget):
+            if failure == "auth":
+                raise transport.AuthFailedException("rejected")
+            if failure == "no_connection":
+                raise transport.NotValidConnectionException()
+
+        def execute(self, _statement, _budget):
             if failure == "timeout":
                 raise transport.IOErrorException(transport.IOErrorException.E_TIMEOUT, "timeout")
 
@@ -244,22 +251,15 @@ def test_transport_errors_release_resources_and_do_not_become_no_relationship(
 
         def release(self):
             events.append("release")
-
-    class Pool:
-        def init(self, _addresses, _config):
-            return True
-
-        def get_session(self, _user, _password):
-            if failure == "auth":
-                raise transport.AuthFailedException("rejected")
-            if failure == "no_connection":
-                raise transport.NotValidConnectionException()
-            return Session()
+            self.close()
 
         def close(self):
             events.append("close")
 
-    monkeypatch.setattr(transport, "ConnectionPool", Pool)
+        def discard(self):
+            self.close()
+
+    monkeypatch.setattr(sessions, "GraphSession", Session)
     manifest = ProjectionManifest(
         space="relationship_lab_fake",
         projection_id="fake",
@@ -273,8 +273,10 @@ def test_transport_errors_release_resources_and_do_not_become_no_relationship(
     expected = PathBudgetExceeded if failure == "timeout" else GraphDependencyError
     with pytest.raises(expected):
         client.execute("read only fixture", PathBudget(3000, 100), 1)
-    assert events[-1] == "close"
+    client.close()
     if failure in {"timeout", "server"}:
+        assert events[-1] == "close"
+    if failure == "server":
         assert events[0] == "release"
     assert all(client.slots.acquire(blocking=False) for _ in range(4))
     assert not client.slots.acquire(blocking=False)

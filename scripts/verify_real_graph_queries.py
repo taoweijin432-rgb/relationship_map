@@ -7,6 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+from typing import cast
 
 from sqlalchemy import create_engine
 
@@ -51,6 +52,7 @@ def verify(output: Path) -> dict:
     manifest = json.loads((output / "manifest.json").read_text())
     person, expected = expected_layers(output / "source.sqlite")
     engine = create_engine(f"sqlite:///file:{output / 'source.sqlite'}?mode=ro&uri=true")
+    client = None
     try:
         _, tables = query_schema()
         source = SQLRepository(engine, tables=tables)
@@ -60,7 +62,7 @@ def verify(output: Path) -> dict:
             data_version=source.version,
             reference_month=source.reference_month,
             source_digest=manifest["source_digest"],
-            counts=dict(source.counts()),
+            counts=cast(dict[str, int], source.counts()),
         )
         reader = ReaderCredentials.model_validate_json(
             (output / "graph/reader-credentials.json").read_text()
@@ -120,6 +122,8 @@ def verify(output: Path) -> dict:
             "observation_scope": "single-real-small-neighborhood-sequential",
         }
     finally:
+        if client is not None:
+            client.close()
         engine.dispose()
 
 

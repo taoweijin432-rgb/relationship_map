@@ -48,7 +48,11 @@ class GraphPathRepository:
             if snapshot_digest(connection) != self.manifest.source_digest:
                 raise QueryError("GRAPH_VERSION_MISMATCH", "SQL 内容与图投影快照不一致", 409)
         self.client = GraphClient(self.manifest, read_reader(manifest_path))
-        self.client.check_version(PathBudget(3000, 5000))
+        try:
+            self.client.check_version(PathBudget(3000, 5000))
+        except BaseException:
+            self.client.close()
+            raise
 
     @contextmanager
     def session(self, budget: PathBudget) -> Iterator[PathReader]:

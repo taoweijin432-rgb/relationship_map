@@ -103,7 +103,11 @@ class SourceGraphRepository:
             verify=sql.verify_connection,
         )
         self.client = SourceGraphClient(self.manifest, read_reader(manifest_path))
-        self.client.check_version(PathBudget(3000, 5000))
+        try:
+            self.client.check_version(PathBudget(3000, 5000))
+        except BaseException:
+            self.client.close()
+            raise
 
     def session(self, budget: PathBudget) -> AbstractContextManager[PathReader]:
         return self.sql.session(budget)

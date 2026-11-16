@@ -51,6 +51,7 @@ async def _source_lifespan(
         if isinstance(definition, UUIDManifest):
             uuid_source = UUIDRepository(engine, definition, release_check=check)
             uuid_graph = UUIDGraphRepository(uuid_source, manifest)
+            app.state.graph_client = uuid_graph.client
             uuid_source.graph = uuid_graph
             app.state.query_service = MaterializedQueryService(uuid_source, uuid_graph)
             app.state.source_guard = uuid_source
@@ -63,6 +64,7 @@ async def _source_lifespan(
         app.state.query_service = QueryService(source)
         app.state.source_guard = source
         graph = SourceGraphRepository(source, manifest)
+        app.state.graph_client = graph.client
         app.state.path_service = GraphPathService(
             graph,
             app.state.query_service,
@@ -70,6 +72,7 @@ async def _source_lifespan(
         )
         yield
     finally:
+        _close_graph_client(app)
         engine.dispose()
 
 
@@ -202,6 +205,7 @@ def create_app(
             )
             if selected_graph:
                 graph = GraphPathRepository(paths, engine, selected_graph)
+                app.state.graph_client = graph.client
                 mode = graph_engine or os.environ.get("RELATIONSHIP_GRAPH_ENGINE", "paths")
                 if mode == "paths":
                     app.state.path_service = GraphPathService(
@@ -222,6 +226,7 @@ def create_app(
                 app.state.path_service = PathService(paths, app.state.query_service)
             yield
         finally:
+            _close_graph_client(app)
             engine.dispose()
 
     app = FastAPI(
@@ -280,6 +285,7 @@ async def _numeric_lifespan(app: FastAPI, directory: Path) -> AsyncIterator[None
         source = NumericRepository(directory)
     try:
         graph = source.graph_repository()
+        app.state.graph_client = graph.client
         app.state.query_service = MaterializedQueryService(source, graph)
         app.state.source_guard = source
         app.state.path_service = GraphPathService(
@@ -289,9 +295,17 @@ async def _numeric_lifespan(app: FastAPI, directory: Path) -> AsyncIterator[None
         )
         yield
     finally:
+        _close_graph_client(app)
         source.engine.dispose()
         if people_engine is not None:
             people_engine.dispose()
+
+
+def _close_graph_client(app: FastAPI) -> None:
+    client = getattr(app.state, "graph_client", None)
+    if client is not None:
+        client.close()
+        app.state.graph_client = None
 
 
 def _error(request: Request, code: str, message: str, status: int) -> JSONResponse:

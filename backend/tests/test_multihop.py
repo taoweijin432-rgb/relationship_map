@@ -110,6 +110,9 @@ def test_native_traversal_filters_cursor_after_all_steps():
         return [{"person_id": "p:expert:9"}]
 
     graph = object.__new__(MaterializedGraphRepository)
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    graph.cache = RelationCache("test-only", max_bytes=0)
     graph.client = SimpleNamespace(execute=execute)
     scope = SearchRequest(
         relation_type="same_company_overlap",
@@ -407,6 +410,48 @@ def test_native_shortest_tie_detail_export_expand_and_filters(native_chain):
         },
     )
     assert invalid_cursor.status_code == 422
+
+
+@pytest.mark.parametrize("cache_enabled", [False, True])
+def test_native_export_computes_shortest_connections_once(
+    native_chain, monkeypatch, cache_enabled
+):
+    from relationship_query.infrastructure.uuid_graph import MaterializedReader
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    graph = native_chain.app.state.query_service.graph
+    monkeypatch.setattr(
+        graph, "cache", RelationCache("export-check", max_bytes=8192 if cache_enabled else 0)
+    )
+
+    filters = {"max_hops": 4, "relation_type": "same_company", "page_size": 20}
+    page = call(native_chain, "/persons/p:expert:1/relations/search", filters)
+    original = MaterializedReader.shortest_connections
+    calls = []
+
+    def record(self, *args, **kwargs):
+        calls.append(args)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(MaterializedReader, "shortest_connections", record)
+    exported = call(
+        native_chain,
+        "/exports/persons",
+        {
+            "reference_id": "p:expert:1",
+            "filters": filters,
+            "data_version": page["data_version"],
+            "expected_person_ids": [item["person"]["id"] for item in page["items"]],
+        },
+    )
+    assert len(calls) == 1
+    assert [item["person"]["id"] for item in exported["items"]] == [
+        item["person"]["id"] for item in page["items"]
+    ]
+    assert [item["relations"] for item in exported["items"]] == [
+        item["relations"] for item in page["items"]
+    ]
+    assert all(item["connection_detail"]["segments"] for item in exported["items"])
 
 
 def test_native_budget_and_integrity_fail_explicitly(native_chain, monkeypatch):

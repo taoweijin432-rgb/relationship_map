@@ -1,12 +1,12 @@
-"""只读图会话边界：每次 RPC 使用剩余预算、独立回收 SDK 连接。"""
+"""只读图会话边界：有界独占复用，每次RPC遵守剩余预算。"""
 
 import logging
+import weakref
 from hashlib import sha256
-from math import ceil
 from threading import BoundedSemaphore
 from typing import Any
 
-from nebula3.Config import Config  # type: ignore[import-untyped]
+from nebula3.common.ttypes import ErrorCode  # type: ignore[import-untyped]
 from nebula3.Exception import (  # type: ignore[import-untyped]
     AuthFailedException,
     ClientServerIncompatibleException,
@@ -14,7 +14,6 @@ from nebula3.Exception import (  # type: ignore[import-untyped]
     NotValidConnectionException,
     NoValidSessionException,
 )
-from nebula3.gclient.net import ConnectionPool  # type: ignore[import-untyped]
 
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_model import (
@@ -22,8 +21,10 @@ from relationship_query.infrastructure.graph_model import (
     ReaderCredentials,
     literal,
 )
+from relationship_query.infrastructure.graph_sessions import GraphSession, GraphSessionPool
 from relationship_query.infrastructure.source_graph_model import SourceManifest
 from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
 
 logger = logging.getLogger("relationship_query.graph")
@@ -41,6 +42,15 @@ class GraphClient:
     ) -> None:
         self.manifest, self.credentials = manifest, credentials
         self.slots = BoundedSemaphore(4)
+        self.sessions = GraphSessionPool(credentials)
+        self.relation_cache = RelationCache.configured(
+            f"relation-v1/{manifest.space}/{manifest.projection_id}/{manifest.source_digest}"
+        )
+        self._finalizer = weakref.finalize(self, self.sessions.close)
+
+    def close(self) -> None:
+        self.relation_cache.close()
+        self._finalizer()
 
     @traced("GraphClient.execute")
     def execute(
@@ -50,18 +60,8 @@ class GraphClient:
         if not self.slots.acquire(timeout=max(0, min(0.1, budget.deadline - budget.clock()))):
             budget.check()
             raise QueryError("GRAPH_BUSY", "图查询连接已满，请稍后重试", 503)
-        pool, session = ConnectionPool(), None
         try:
-            config = Config()
-            config.timeout = max(1, ceil((budget.deadline - budget.clock()) * 1000))
-            config.max_connection_pool_size = 1
-            if not pool.init([(self.credentials.host, self.credentials.port)], config):
-                raise GraphDependencyError()
-            session = pool.get_session(
-                self.credentials.username, self.credentials.password.get_secret_value()
-            )
-            budget.check()
-            result = session.execute(f"USE `{self.manifest.space}`; " + statement)
+            result = self._session_result(statement, budget, maximum_rows)
             if not result.is_succeeded():
                 logger.warning(
                     "graph execution rejected code=%s detail=%s statement=%s "
@@ -82,6 +82,12 @@ class GraphClient:
         except IOErrorException as exc:
             if exc.type == IOErrorException.E_TIMEOUT:
                 raise PathBudgetExceeded("time_limit") from None
+            logger.warning(
+                "graph dependency failure: IOErrorException type=%s statement=%s elapsed_ms=%s",
+                exc.type,
+                sha256(statement.encode()).hexdigest()[:16],
+                budget.elapsed_ms(),
+            )
             raise GraphDependencyError() from None
         except (
             AuthFailedException,
@@ -95,10 +101,26 @@ class GraphClient:
             budget.check()
             raise GraphDependencyError() from None
         finally:
-            if session is not None:
-                session.release()
-            pool.close()
             self.slots.release()
+
+    def _session_result(self, statement: str, budget: PathBudget, maximum_rows: int) -> Any:
+        for attempt in range(2):
+            session: GraphSession = self.sessions.borrow(budget)
+            reusable = False
+            try:
+                budget.check()
+                result = session.execute(f"USE `{self.manifest.space}`; " + statement, budget)
+                reusable = result.error_code() not in {
+                    ErrorCode.E_SESSION_INVALID,
+                    ErrorCode.E_SESSION_TIMEOUT,
+                }
+            finally:
+                self.sessions.give_back(session, reusable=reusable)
+            if reusable or attempt:
+                return result
+            # 仅会话失效后的只读重试一次，不重试慢查询、资源拒绝或传输超时。
+            budget.graph_request(maximum_rows)
+        raise AssertionError("Session retry must return or raise")
 
     def check_version(self, budget: PathBudget) -> None:
         rows = self.execute(

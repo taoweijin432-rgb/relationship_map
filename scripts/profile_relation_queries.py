@@ -29,6 +29,7 @@ def profile(config_file: Path, person_id: str) -> bool:
     _, release = NightlyPublisher(config)._environment()
     engine = open_people_engine(sources, os.environ.get("RELATIONSHIP_MYSQL_INSECURE_TLS") == "1")
     repository = None
+    graph = None
     try:
         started = perf_counter()
         repository = LiveRealGraphRepository(release, MySQLPeople(engine))
@@ -48,6 +49,8 @@ def profile(config_file: Path, person_id: str) -> bool:
         )
         return profile_depths(service, person_id)
     finally:
+        if graph is not None:
+            graph.client.close()
         if repository is not None:
             repository.engine.dispose()
         engine.dispose()

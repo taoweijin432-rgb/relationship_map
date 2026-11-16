@@ -166,12 +166,16 @@ class NumericRepository(MaterializedSQLRepository):
             self.engine, self.version, self.reference_month, tables=self.tables
         )
         client = NumericGraphClient(self.manifest, self._graph_credentials())
-        graph = MaterializedGraphRepository(self, paths, client)
-        plan = json.loads((self.release / "graph-plan.json").read_text())
-        self._verify_graph(client, plan)
-        self.verify_snapshot()
-        self.graph = graph
-        return graph
+        try:
+            graph = MaterializedGraphRepository(self, paths, client)
+            plan = json.loads((self.release / "graph-plan.json").read_text())
+            self._verify_graph(client, plan)
+            self.verify_snapshot()
+            self.graph = graph
+            return graph
+        except BaseException:
+            client.close()
+            raise
 
     def _graph_credentials(self) -> ReaderCredentials:
         return read_reader(self.release / "manifest.json")
