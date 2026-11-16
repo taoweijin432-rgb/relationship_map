@@ -77,10 +77,11 @@ class PathBudget:
         clock: Callable[[], float] = monotonic,
         sql_limit: int = 500_000,
         pair_limit: int = 50_000,
+        inherit_request: bool = True,
     ) -> None:
         self.clock, self.started = clock, clock()
         self.deadline = self.started + time_ms / 1000
-        self.parent = _request_budget.get()
+        self.parent = _request_budget.get() if inherit_request else None
         if self.parent is not None:
             # 自定义测试时钟与monotonic可能原点不同，只传播剩余时长。
             self.deadline = min(
