@@ -65,7 +65,7 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
 export const api = {
   paths: (body: PathRequest, signal: AbortSignal) =>
     request<PathResponse>('/relations/paths', body, signal),
-  meta: () => request<MetaResponse>('/meta'),
+  meta: (signal?: AbortSignal) => request<MetaResponse>('/meta', undefined, signal),
   compare: (referenceId: string, candidateId: string, signal: AbortSignal) =>
     request<ComparisonResponse>(
       '/persons/compare',
@@ -75,13 +75,17 @@ export const api = {
       },
       signal,
     ),
-  people: (keyword = '') =>
+  people: (keyword = '', signal?: AbortSignal) =>
     request<components['schemas']['PersonsResponse']>(
       `/persons/suggest?q=${encodeURIComponent(keyword)}&limit=50`,
+      undefined,
+      signal,
     ),
-  entities: (type: Entity['type'], keyword = '') =>
+  entities: (type: Entity['type'], keyword = '', signal?: AbortSignal) =>
     request<components['schemas']['EntitiesResponse']>(
       `/entities/suggest?type=${type}&q=${encodeURIComponent(keyword)}&limit=50`,
+      undefined,
+      signal,
     ),
   entity: (id: string, signal?: AbortSignal) =>
     request<EntityResponse>(`/entities/${encodeURIComponent(id)}`, undefined, signal),

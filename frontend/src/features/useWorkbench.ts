@@ -76,10 +76,14 @@ export function useWorkbench() {
   const pageIndex = ref(0)
   const cursors = ref<(string | null)[]>([null])
   let ready = false
+  let disposed = false
   let queryController: AbortController | undefined
   let detailController: AbortController | undefined
   let expandController: AbortController | undefined
   let suggestSequence = 0
+  let peopleController: AbortController | undefined
+  const entityControllers: Partial<Record<Entity['type'], AbortController>> = {}
+  let initializeController: AbortController | undefined
   const entitySequences = { organization: 0, school: 0, role: 0, major: 0 }
   let restoreController: AbortController | undefined
 
@@ -331,37 +335,73 @@ export function useWorkbench() {
     { flush: 'sync' },
   )
 
+  async function initialChoice<T>(
+    request: Promise<T>,
+    controller: AbortController,
+  ): Promise<T | null> {
+    try {
+      return await request
+    } catch (err) {
+      if (controller.signal.aborted) return null
+      throw err
+    }
+  }
+
   async function initialize() {
+    if (disposed) return
+    initializeController?.abort()
+    const controller = new AbortController()
+    initializeController = controller
+    peopleController?.abort()
+    const people = new AbortController()
+    peopleController = people
+    const peopleSequence = ++suggestSequence
+    const entities = (['organization', 'school', 'role', 'major'] as const).map((kind) => {
+      entityControllers[kind]?.abort()
+      const pending = new AbortController()
+      entityControllers[kind] = pending
+      return { kind, controller: pending, sequence: ++entitySequences[kind] }
+    })
     error.value = ''
     loading.value = true
     try {
-      const [info, people, companies, schools, roles, majors] = await Promise.all([
-        api.meta(),
-        api.people(),
-        api.entities('organization'),
-        api.entities('school'),
-        api.entities('role'),
-        api.entities('major'),
+      const [info, peopleResult, entityResults] = await Promise.all([
+        api.meta(controller.signal),
+        initialChoice(api.people('', people.signal), people),
+        Promise.all(
+          entities.map(({ kind, controller: pending }) =>
+            initialChoice(api.entities(kind, '', pending.signal), pending),
+          ),
+        ),
       ])
+      if (controller.signal.aborted) return
       meta.value = info
-      options.people = people.items
-      options.organization = companies.items
-      options.school = schools.items
-      options.role = roles.items
-      options.major = majors.items
+      if (peopleResult && peopleSequence === suggestSequence) options.people = peopleResult.items
+      entities.forEach(({ kind, sequence }, index) => {
+        const result = entityResults[index]
+        if (result && sequence === entitySequences[kind]) options[kind] = result.items
+      })
       ready = true
       loading.value = false
     } catch (err) {
+      if (controller.signal.aborted) return
+      controller.abort()
+      people.abort()
+      entities.forEach(({ controller: pending }) => pending.abort())
       error.value = messageOf(err)
       loading.value = false
     }
   }
 
   async function suggestPeople(keyword: string) {
+    if (disposed) return
+    peopleController?.abort()
+    const controller = new AbortController()
+    peopleController = controller
     const sequence = ++suggestSequence
     try {
-      const response = await api.people(keyword)
-      if (sequence === suggestSequence) {
+      const response = await api.people(keyword, controller.signal)
+      if (!controller.signal.aborted && sequence === suggestSequence) {
         const selected = options.people.find((p) => p.id === referenceId.value)
         options.people =
           selected && !response.items.some((p) => p.id === selected.id)
@@ -369,15 +409,19 @@ export function useWorkbench() {
             : response.items
       }
     } catch (err) {
-      if (sequence === suggestSequence) error.value = messageOf(err)
+      if (!controller.signal.aborted && sequence === suggestSequence) error.value = messageOf(err)
     }
   }
 
   async function suggestEntities(kind: Entity['type'], keyword: string) {
+    if (disposed) return
+    entityControllers[kind]?.abort()
+    const controller = new AbortController()
+    entityControllers[kind] = controller
     const sequence = ++entitySequences[kind]
     try {
-      const response = await api.entities(kind, keyword)
-      if (sequence !== entitySequences[kind]) return
+      const response = await api.entities(kind, keyword, controller.signal)
+      if (controller.signal.aborted || sequence !== entitySequences[kind]) return
       const ids = new Set([
         ...entityFilters.company,
         ...entityFilters.school,
@@ -394,7 +438,8 @@ export function useWorkbench() {
       response.items.forEach((e) => choices.set(e.id, e))
       options[kind] = [...choices.values()]
     } catch (err) {
-      if (sequence === entitySequences[kind]) error.value = messageOf(err)
+      if (!controller.signal.aborted && sequence === entitySequences[kind])
+        error.value = messageOf(err)
     }
   }
 
@@ -578,6 +623,10 @@ export function useWorkbench() {
 
   onMounted(() => void initialize())
   onBeforeUnmount(() => {
+    disposed = true
+    initializeController?.abort()
+    peopleController?.abort()
+    Object.values(entityControllers).forEach((controller) => controller.abort())
     queryController?.abort()
     detailController?.abort()
     expandController?.abort()

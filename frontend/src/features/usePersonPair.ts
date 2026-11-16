@@ -8,6 +8,7 @@ export function usePersonPair(initialReference: string, initialCandidate: string
   const suggestionError = ref('')
   let sequence = 0
   let disposed = false
+  let controller: AbortController | undefined
 
   function remember(people: Person[]) {
     const byId = new Map(choices.value.map((person) => [person.id, person]))
@@ -16,10 +17,14 @@ export function usePersonPair(initialReference: string, initialCandidate: string
   }
 
   async function suggest(keyword = '') {
+    if (disposed) return
+    controller?.abort()
+    const pending = new AbortController()
+    controller = pending
     const current = ++sequence
     suggestionError.value = ''
     try {
-      const response = await api.people(keyword)
+      const response = await api.people(keyword, pending.signal)
       if (disposed || current !== sequence) return
       const selected = choices.value.filter((person) =>
         [referenceId.value, candidateId.value].includes(person.id),
@@ -27,7 +32,8 @@ export function usePersonPair(initialReference: string, initialCandidate: string
       choices.value = response.items
       remember(selected)
     } catch (error) {
-      if (!disposed && current === sequence) suggestionError.value = messageOf(error)
+      if (!disposed && !pending.signal.aborted && current === sequence)
+        suggestionError.value = messageOf(error)
     }
   }
 
@@ -40,6 +46,7 @@ export function usePersonPair(initialReference: string, initialCandidate: string
   onMounted(() => void suggest())
   onBeforeUnmount(() => {
     disposed = true
+    controller?.abort()
   })
   return { referenceId, candidateId, choices, suggestionError, remember, suggest, swap }
 }
