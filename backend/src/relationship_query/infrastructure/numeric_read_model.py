@@ -1,5 +1,6 @@
 """将已核对的数字来源及事实写入配套SQL读模型，关系由图提供。"""
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,7 @@ from relationship_query.domain.models import Entity, Fact, Person
 from relationship_query.infrastructure import read_model
 from relationship_query.infrastructure.read_model import QueryTables
 from relationship_query.update.contract import SourceContract
-from relationship_query.update.models import Projection, Row, digest
+from relationship_query.update.models import Projection, Row, UpdateError, digest
 
 
 def query_schema() -> tuple[MetaData, QueryTables]:
@@ -45,7 +46,12 @@ def write_query_model(
     nodes = {str(node["vid"]): node for node in projection.nodes}
     facts = [_fact(edge) for edge in projection.facts]
     people = _people(contract, rows, nodes, facts)
-    entities = [_entity(node) for node in nodes.values() if node["type"] != "person"]
+    schools = {f"e:school:{row['id']}": row for row in rows["school"]}
+    entities = [
+        _entity(node, schools.get(str(node["vid"]), {}).get("former_names"))
+        for node in nodes.values()
+        if node["type"] != "person"
+    ]
     engine = create_engine(f"sqlite:///{path}")
     try:
         schema.create_all(engine)
@@ -66,6 +72,13 @@ def write_query_model(
                 connection.execute(
                     insert(tables.entities), [entity.model_dump() for entity in entities]
                 )
+                alias_rows = [
+                    {"entity_id": entity.id, "name": name}
+                    for entity in entities
+                    for name in entity.aliases
+                ]
+                if alias_rows:
+                    connection.execute(insert(tables.aliases), alias_rows)
             if facts:
                 connection.execute(insert(tables.facts), [fact.model_dump() for fact in facts])
             connection.execute(
@@ -113,15 +126,31 @@ def _people(
     return result
 
 
-def _entity(node: Row) -> Entity:
+def _entity(node: Row, former_names: object = None) -> Entity:
     properties: Any = node["properties"]
     return Entity.model_validate(
         {
             "id": str(node["vid"]).removeprefix("e:"),
             "type": "organization" if node["type"] == "company" else node["type"],
             "name": properties["name"],
+            "aliases": _school_aliases(former_names, properties["name"]),
         }
     )
+
+
+def _school_aliases(value: object, standard_name: str) -> list[str]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            raise UpdateError(
+                "INVALID_ALIASES", "学校former_names需要JSON字符串数组或NULL"
+            ) from None
+    if value is None:
+        return []
+    if not isinstance(value, list) or any(not isinstance(name, str) for name in value):
+        raise UpdateError("INVALID_ALIASES", "学校former_names需要JSON字符串数组或NULL")
+    return sorted({name.strip() for name in value if name.strip()} - {standard_name})
 
 
 def _fact(edge: Row) -> Fact:

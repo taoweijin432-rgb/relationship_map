@@ -28,13 +28,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def real_contract(entities: dict, people: dict) -> SourceContract:
     data = json.loads((ROOT / "docs/examples/update-authoritative-contract-v1.json").read_text())
-    data.update(version="real-split-mysql-v1", adapter="numeric-authoritative-v2")
+    data.update(version="real-split-mysql-v2", adapter="numeric-authoritative-v2")
     for logical, binding in data["tables"].items():
         source = entities if logical in ENTITY_TABLES else people
         table = (ENTITY_TABLES | PERSON_TABLES)[logical]
         binding["physical"] = source["metadata"]["database"] + "." + table
     for name in ("person_expert", "person_resume"):
         data["tables"][name]["columns"].update(city="city", headline="job_name")
+    if any("former_names" in row for row in entities["tables"][ENTITY_TABLES["school"]]):
+        data["tables"]["school"]["columns"]["former_names"] = "former_names"
     data["entity_statuses"] = {kind: ["已核验"] for kind in ("company", "school", "major")}
     data["inactive_entity_statuses"] = {kind: ["已合并"] for kind in ("company", "school", "major")}
     # 只有来源1确认当前任职。来源0保留原值，缺少截止日期时不会获得同期证据。
