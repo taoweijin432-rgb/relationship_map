@@ -118,6 +118,7 @@ class NightlyOperation(UpdateModel):
         "building",
         "activating",
         "starting",
+        "committed",
         "published",
         "rolling_back",
         "rolled_back",
@@ -413,8 +414,10 @@ class NightlyPublisher:
         self.config.state_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         with publisher_lock(self.config.state_directory):
             pending = self._load()
-            if pending is not None and pending.phase not in TERMINAL:
-                return self._recover(pending)
+            if pending is not None and (
+                pending.phase not in TERMINAL or self.config.maintenance_file.exists()
+            ):
+                return self._with_cleanup(self._recover(pending))
             if not self._window(scheduled):
                 return {"status": "outside_window"}
             if self.config.source_config_file is not None and prepared is None:
@@ -496,6 +499,8 @@ class NightlyPublisher:
             operation = self._save(operation, phase="starting")
             self.host.service("start", self._remaining(self.config.service_timeout_seconds))
             self.host.ready(expected, self._remaining(self.config.startup_timeout_seconds))
+            # 查询一旦开放即可观察到新版本，提交决定必须先于入口开放持久化。
+            operation = self._save(operation, phase="committed")
             self._marker(operation, remove=True)
             self._save(operation, phase="published")
             return {
@@ -504,10 +509,14 @@ class NightlyPublisher:
                 "release": str(operation.candidate),
             }
         except Exception as error:
+            # 原子写可能在替换文件后抛错，以持久日志中的提交决定处理恢复。
+            operation = self._load() or operation
             operation = self._save(
                 operation, error_code=getattr(error, "code", type(error).__name__)
             )
-            self._recover(operation)
+            result = self._recover(operation)
+            if result["status"] == "published":
+                return result
             raise UpdateError(
                 "NIGHTLY_UPDATE_FAILED", "夜间更新失败，上一完整发布已恢复，请检查任务日志"
             ) from None
@@ -526,6 +535,12 @@ class NightlyPublisher:
         atomic_file(self.config.environment_file, new if candidate else old, mode)
 
     def _recover(self, operation: NightlyOperation) -> dict:
+        if operation.phase in {"committed", "published"} or (
+            operation.phase == "starting" and not self.config.maintenance_file.exists()
+        ):
+            # 兼容旧程序先开放入口后写published留下的starting任务。
+            operation = self._save(operation, phase="committed")
+            return self._complete_publication(operation)
         original_phase = operation.phase
         try:
             operation = self._save(operation, phase="rolling_back")
@@ -557,6 +572,45 @@ class NightlyPublisher:
                 "NIGHTLY_RECOVERY_FAILED", "恢复未完成，维护状态已保留，请读取任务记录"
             ) from None
 
+    def _complete_publication(self, operation: NightlyOperation) -> dict:
+        try:
+            if self.config.maintenance_file.exists():
+                self._marker(operation)
+            current, release = self._environment()
+            if (
+                digest(current.decode()) != operation.new_environment_digest
+                or release != operation.candidate.resolve()
+            ):
+                raise UpdateError("NIGHTLY_ENV_CHANGED", "已提交发布的查询配置已变化，请核对后恢复")
+            _, expected = verified_release(operation.candidate)
+            if not self.host.active(
+                self._remaining(self.config.service_timeout_seconds, recovery=True)
+            ):
+                self._marker(operation)
+                self.host.service(
+                    "start", self._remaining(self.config.service_timeout_seconds, recovery=True)
+                )
+            self.host.ready(
+                expected, self._remaining(self.config.startup_timeout_seconds, recovery=True)
+            )
+            self._marker(operation, remove=True)
+            self._save(operation, phase="published", error_code=None)
+            return {
+                "status": "published",
+                "version": expected.version,
+                "release": str(operation.candidate),
+            }
+        except Exception as error:
+            self._marker(operation)
+            self._save(
+                operation,
+                error_code=getattr(error, "code", type(error).__name__),
+            )
+            raise UpdateError(
+                "NIGHTLY_PUBLICATION_RECOVERY_FAILED",
+                "已提交的新版本恢复未完成，请核对维护标记及任务记录后重试",
+            ) from None
+
     def recover(self) -> dict:
         if not self.config.state_directory.exists():
             return {"status": "idle"}
@@ -566,12 +620,9 @@ class NightlyPublisher:
                 return {"status": "idle"}
             if operation.phase in TERMINAL:
                 if self.config.maintenance_file.exists():
-                    release = (
-                        operation.candidate
-                        if operation.phase == "published"
-                        else operation.previous_release
-                    )
-                    _, expected = verified_release(release)
+                    if operation.phase == "published":
+                        return self._with_cleanup(self._recover(operation))
+                    _, expected = verified_release(operation.previous_release)
                     self.host.ready(expected, self.config.startup_timeout_seconds)
                     self._marker(operation, remove=True)
                 return self._with_cleanup({"status": "idle"})

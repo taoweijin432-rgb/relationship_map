@@ -13,6 +13,13 @@
 - 新数据到位后，按主方案的重评步骤核对数据契约、统计分布、业务负载与现有基础设施，再修订选型和代码架构。
 - 不把模拟数据、小样本测试或未执行的检查描述成实际生产验证结果。
 
+## v0.61 开放查询后的发布中断恢复
+
+- 用户在隔离环境报告qa-20261113-02／3a9c48f的starting状态开放入口后SIGKILL，旧recover回退已可见新版本及直连。nightly.py新增committed阶段，在候选启动核验后先持久登记再移除维护标记，提交后恢复继续核对候选并完成published。旧starting且无维护标记同样继续发布，提交前中断继续按原回退路径处理。
+- 异常处理重新加载持久全局任务以识别原子替换后抛错，已提交恢复失败保留committed及错误码并进入维护重试，外部配置原值保留。健康且已开放候选核验期间保持开放，API已停止时先维护再启动。run及recover均支持提交任务、残留维护入口和重复恢复。
+- 新增17专项，完整后端683通过／247跳过，Ruff及Mypy90文件通过，1项既有Starlette提示。实际本机Nebula3.8／Nginx1.18／查询API及2个合成人物对照，旧版发布＋旧恢复复现新关系消失，修复版＋修复恢复及旧发布＋修复恢复均保持新版本与same_company直连并完成published，重复recover为idle。三组均实际SIGKILL发布进程，服务启停使用本机独立进程适配。
+- 本轮合成旧版本real-c2cb12082de87f6c017c-202611，新版本real-e7dfc9b10650cc0e7e2b-202611。记录data/nightly-publish-recovery-v061/20261116/native-v3，本次API已停止、4个图空间及账号、Nginx容器已回收。主方案v0.61与docs/nightly-release.md v1.5维护。共享测试服修复部署及实际systemd恢复专项仍待验收。
+
 ## v0.60 学校曾用名候选修复
 
 - 用户反馈广东医学院／浙江科技学院候选No data，标准名能命中school:41／73。采集原始冻结行已带former_names，real_contract白名单及numeric_read_model未传递字段和索引为实际原因。

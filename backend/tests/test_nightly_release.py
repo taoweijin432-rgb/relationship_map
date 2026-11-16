@@ -223,6 +223,177 @@ def test_interrupted_operation_recovers_after_restart(case, phase):
     assert not case.config.maintenance_file.exists()
 
 
+@pytest.mark.parametrize("point", ["before_open", "after_open", "before_published"])
+@pytest.mark.parametrize("entry", ["recover", "run"])
+def test_committed_publication_survives_interruption(case, monkeypatch, point, entry):
+    original_marker, original_save = case.publisher._marker, case.publisher._save
+
+    def marker(operation, *, remove=False):
+        if remove:
+            assert case.publisher.status()["phase"] == "committed"
+            if point == "before_open":
+                raise KeyboardInterrupt()
+        original_marker(operation, remove=remove)
+        if remove and point == "after_open":
+            raise KeyboardInterrupt()
+
+    def save(operation, **changes):
+        if changes.get("phase") == "published" and point == "before_published":
+            raise KeyboardInterrupt()
+        return original_save(operation, **changes)
+
+    monkeypatch.setattr(case.publisher, "_marker", marker)
+    monkeypatch.setattr(case.publisher, "_save", save)
+    with pytest.raises(KeyboardInterrupt):
+        case.publisher.run()
+    assert case.publisher.status()["phase"] == "committed"
+    assert case.config.maintenance_file.exists() == (point == "before_open")
+    candidate = case.host.loaded
+    calls = list(case.host.calls)
+    restarted = NightlyPublisher(case.config, case.host)
+    result = getattr(restarted, entry)()
+    assert result["status"] == "published" and result["version"] == "nightly-next"
+    assert case.host.loaded == candidate and case.host.running
+    assert case.host.calls == calls + ["ready_new"]
+    assert restarted.status()["phase"] == "published"
+    assert not case.config.maintenance_file.exists()
+    assert restarted.recover()["status"] == "idle"
+
+
+@pytest.mark.parametrize("running", [True, False])
+def test_legacy_open_starting_operation_recovers_new_version(case, running):
+    case.publisher.run()
+    candidate = case.host.loaded
+    case.publisher._save(case.publisher._load(), phase="starting")
+    case.host.running = running
+    case.host.calls.clear()
+    result = NightlyPublisher(case.config, case.host).recover()
+    assert result["status"] == "published"
+    assert case.host.loaded == candidate and case.host.running
+    assert case.host.calls == (["ready_new"] if running else ["start", "ready_new"])
+    assert case.publisher.status()["phase"] == "published"
+
+
+def test_open_healthy_committed_recovery_keeps_gate_open(case):
+    case.publisher.run()
+    case.publisher._save(case.publisher._load(), phase="committed")
+    original_ready = case.host.ready
+
+    def ready(expected, timeout):
+        assert not case.config.maintenance_file.exists()
+        original_ready(expected, timeout)
+
+    case.host.ready = ready
+    assert NightlyPublisher(case.config, case.host).recover()["status"] == "published"
+
+
+def test_committed_recovery_failure_remains_forward_recoverable(case):
+    case.publisher.run()
+    case.publisher._save(case.publisher._load(), phase="committed")
+    candidate = case.host.loaded
+    case.host.calls.clear()
+    case.host.fail = "ready_new"
+    with pytest.raises(UpdateError) as error:
+        NightlyPublisher(case.config, case.host).recover()
+    assert error.value.code == "NIGHTLY_PUBLICATION_RECOVERY_FAILED"
+    assert case.publisher.status()["phase"] == "committed"
+    assert case.config.maintenance_file.exists()
+    assert case.host.loaded == candidate and "stop" not in case.host.calls
+    case.host.fail = None
+    assert NightlyPublisher(case.config, case.host).recover()["status"] == "published"
+    assert not case.config.maintenance_file.exists()
+
+
+def test_committed_recovery_preserves_foreign_environment(case):
+    case.publisher.run()
+    case.publisher._save(case.publisher._load(), phase="committed")
+    changed = case.config.environment_file.read_bytes() + b"MANUAL_CHANGE=1\n"
+    case.config.environment_file.write_bytes(changed)
+    case.host.calls.clear()
+    with pytest.raises(UpdateError) as error:
+        NightlyPublisher(case.config, case.host).recover()
+    assert error.value.code == "NIGHTLY_PUBLICATION_RECOVERY_FAILED"
+    assert case.config.environment_file.read_bytes() == changed
+    assert case.publisher.status()["error_code"] == "NIGHTLY_ENV_CHANGED"
+    assert case.publisher.status()["phase"] == "committed"
+    assert case.host.calls == [] and case.config.maintenance_file.exists()
+
+
+def test_committed_recovery_rejects_damaged_candidate_and_can_retry(case):
+    case.publisher.run()
+    case.publisher._save(case.publisher._load(), phase="committed")
+    manifest = case.host.loaded / "manifest.json"
+    original = manifest.read_bytes()
+    manifest.write_text("invalid")
+    case.host.calls.clear()
+    with pytest.raises(UpdateError) as error:
+        NightlyPublisher(case.config, case.host).recover()
+    assert error.value.code == "NIGHTLY_PUBLICATION_RECOVERY_FAILED"
+    assert case.publisher.status()["phase"] == "committed"
+    assert case.config.maintenance_file.exists() and case.host.calls == []
+    manifest.write_bytes(original)
+    assert NightlyPublisher(case.config, case.host).recover()["status"] == "published"
+
+
+@pytest.mark.parametrize("entry", ["recover", "run"])
+def test_published_operation_with_leftover_marker_keeps_candidate(case, entry):
+    case.publisher.run()
+    candidate = case.host.loaded
+    case.publisher._marker(case.publisher._load())
+    case.host.calls.clear()
+    result = getattr(NightlyPublisher(case.config, case.host), entry)()
+    assert result["status"] == "published"
+    assert case.host.loaded == candidate and case.host.calls == ["ready_new"]
+    assert case.publisher.status()["phase"] == "published"
+    assert not case.config.maintenance_file.exists()
+
+
+def test_error_after_open_completes_publication_without_rollback(case, monkeypatch):
+    original = case.publisher._marker
+    failed = False
+
+    def marker(operation, *, remove=False):
+        nonlocal failed
+        original(operation, remove=remove)
+        if remove and not failed:
+            failed = True
+            raise OSError("test-only failure after opening")
+
+    monkeypatch.setattr(case.publisher, "_marker", marker)
+    assert case.publisher.run()["status"] == "published"
+    assert case.host.loaded != case.previous
+    assert case.host.calls.count("stop") == 1
+    assert case.publisher.status()["phase"] == "published"
+
+
+@pytest.mark.parametrize("journal", [True, False])
+def test_commit_atomic_write_error_uses_durable_global_decision(case, monkeypatch, journal):
+    original = nightly.atomic_file
+    failed = False
+
+    def atomic(path, data, mode=0o600):
+        nonlocal failed
+        original(path, data, mode)
+        if failed or path.name != "operation.json":
+            return
+        if json.loads(data).get("phase") != "committed":
+            return
+        if (path == case.publisher.journal) == journal:
+            failed = True
+            raise OSError("test-only post-replace error")
+
+    monkeypatch.setattr(nightly, "atomic_file", atomic)
+    if journal:
+        assert case.publisher.run()["status"] == "published"
+        assert case.host.loaded != case.previous
+    else:
+        with pytest.raises(UpdateError) as error:
+            case.publisher.run()
+        assert error.value.code == "NIGHTLY_UPDATE_FAILED"
+        assert case.host.loaded == case.previous
+    assert not case.config.maintenance_file.exists()
+
+
 def test_run_first_recovers_pending_operation(case):
     case.host.crash = "build"
     with pytest.raises(KeyboardInterrupt):
