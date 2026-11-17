@@ -122,9 +122,8 @@ def test_native_traversal_filters_cursor_after_all_steps():
         relation_end_month=202212,
         min_overlap_months=6,
     )
-    assert graph.neighbor_page("p:expert:1", scope, "p:expert:8", PathBudget(5000, 5000)) == [
-        "p:expert:9"
-    ]
+    block = graph.neighbor_block("p:expert:1", scope, "p:expert:8", PathBudget(5000, 5000))
+    assert block.ids == ("p:expert:9",) and not block.has_more
     traversal, output = calls[0].split(" | ", 1)
     assert "GO 1 TO 4 STEPS" in traversal and "BIDIRECT" in traversal
     assert "properties(edge).entity_vid" in traversal
@@ -581,7 +580,7 @@ def test_native_budget_and_integrity_fail_explicitly(native_chain, monkeypatch):
 
     monkeypatch.setattr(graph, "cache", RelationCache("budget-check", max_bytes=0))
     with monkeypatch.context() as patch:
-        patch.setattr(graph, "neighbor_page", exceeded)
+        patch.setattr(graph, "neighbor_block", exceeded)
         response = native_chain.post(
             "/api/v1/persons/p:expert:1/relations/search", json={"max_hops": 4}
         )

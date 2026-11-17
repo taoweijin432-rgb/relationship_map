@@ -21,10 +21,10 @@ class MaterializedSQLRepository(SQLRepository):
         found: list[str] = []
         with self.graph.candidate_session(budget):
             while len(found) <= request.page_size:
-                page = self.graph.neighbor_page(reference_id, request, after, budget)
-                if not page:
+                block = self.graph.neighbor_block(reference_id, request, after, budget)
+                if not block.ids:
                     break
-                batch = page[:128]
+                batch = list(block.ids)
                 statement = (
                     select(self.tables.people.c.id)
                     .where(
@@ -37,7 +37,7 @@ class MaterializedSQLRepository(SQLRepository):
                 with self.engine.connect() as connection:
                     found.extend(connection.execute(statement).scalars())
                 budget.check()
-                if len(page) <= 128:
+                if not block.has_more:
                     break
                 after = batch[-1]
         return found[: request.page_size + 1]

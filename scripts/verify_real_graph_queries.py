@@ -9,17 +9,19 @@ from pathlib import Path
 from time import perf_counter
 from typing import cast
 
-from sqlalchemy import create_engine
-
 from relationship_query.contracts import SearchRequest
 from relationship_query.domain.path_budget import PathBudget
 from relationship_query.infrastructure.graph_model import ReaderCredentials
-from relationship_query.infrastructure.numeric_api import NumericGraphClient, NumericManifest
+from relationship_query.infrastructure.numeric_api import (
+    NumericGraphClient,
+    NumericManifest,
+)
 from relationship_query.infrastructure.numeric_read_model import query_schema
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.sqlite_paths import SQLitePathRepository
 from relationship_query.infrastructure.uuid_graph import MaterializedGraphRepository
 from relationship_query.update.artifacts import write_json
+from sqlalchemy import create_engine
 
 
 def expected_layers(path: Path) -> tuple[str, list[list[str]]]:
@@ -76,7 +78,10 @@ def verify(output: Path) -> dict:
             budget = PathBudget(5000, 5000)
             started = perf_counter()
             with graph.candidate_session(budget):
-                actual = graph.neighbor_page(person, request, None, budget)
+                block = graph.neighbor_block(person, request, None, budget)
+                actual = list(block.ids)
+                if block.has_more:
+                    raise RuntimeError("验证样例超出单候选块，请选择原约定的小邻域")
             if actual != expected[depth - 1]:
                 raise RuntimeError(f"真实图{depth}跳结果与独立SQL事实BFS不符")
             previous = set(expected[depth - 2]) if depth > 1 else set()

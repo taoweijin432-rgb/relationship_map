@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from relationship_query.app import create_app
 from relationship_query.contracts import RelationScope, SearchRequest
+from relationship_query.domain.graph_relations import NeighborBlock
 from relationship_query.domain.models import Dataset, Entity, Fact, Person
 from relationship_query.domain.path_budget import PathBudget
 from relationship_query.infrastructure.projection_source_trial import open_projection_engine
@@ -34,9 +35,10 @@ class PagedGraph:
     def candidate_session(self, budget):
         yield
 
-    def neighbor_page(self, reference, scope, after, budget):
+    def neighbor_block(self, reference, scope, after, budget):
         self.positions.append(after)
-        return [identity for identity in self.ids if after is None or identity > after][:129]
+        page = [identity for identity in self.ids if after is None or identity > after][:129]
+        return NeighborBlock(ids=tuple(page[:128]), has_more=len(page) > 128)
 
 
 @pytest.fixture

@@ -31,6 +31,8 @@ class RelationCache:
             clock,
         )
         self._entries: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
+        self._ranges: dict[str, dict[str, tuple[str, str, bool]]] = {}
+        self._coverage: dict[str, tuple[str, str, str, bool]] = {}
         self._lock = Lock()
         self._bytes = self.hits = self.misses = 0
         self._closed = False
@@ -71,6 +73,46 @@ class RelationCache:
         with self._lock:
             self._store(self.key(arguments), payload)
 
+    def covering(self, arguments: object, after: str | None, budget: PathBudget) -> object | None:
+        """只扫描有界范围元信息，命中后才解码一个候选块。"""
+        budget.check()
+        group, cursor = self.key(["range-v1", arguments]), after or ""
+        with self._lock:
+            ranges = self._ranges.get(group, {})
+            choices = sorted(
+                (
+                    (start, key)
+                    for key, (start, end, complete) in ranges.items()
+                    if start <= cursor and (complete or cursor < end)
+                ),
+                reverse=True,
+            )
+            payload = None
+            for _, key in choices:
+                payload = self._get(key)
+                if payload is not None:
+                    break
+            self.hits += int(payload is not None)
+            self.misses += int(payload is None)
+        observe("relation_cache.range_hit" if payload is not None else "relation_cache.range_miss")
+        return self._decode(payload, budget) if payload is not None else None
+
+    def store_range(
+        self,
+        arguments: object,
+        after: str | None,
+        through: str,
+        complete: bool,
+        result: object,
+        budget: PathBudget,
+    ) -> None:
+        budget.check()
+        payload = json.dumps(result, separators=(",", ":")).encode()
+        budget.check()
+        coverage = (self.key(["range-v1", arguments]), after or "", through, complete)
+        with self._lock:
+            self._store(self.key(["range-v1", arguments, after]), payload, coverage)
+
     @staticmethod
     def _decode(payload: bytes, budget: PathBudget) -> object:
         result = json.loads(payload)
@@ -83,28 +125,48 @@ class RelationCache:
             return None
         expires, payload = entry
         if expires <= self.clock():
-            self._entries.pop(key)
-            self._bytes -= len(key) + len(payload)
+            self._discard(key)
             return None
         self._entries.move_to_end(key)
         return payload
 
-    def _store(self, key: str, payload: bytes) -> None:
-        size = len(key) + len(payload)
+    def _store(
+        self, key: str, payload: bytes, coverage: tuple[str, str, str, bool] | None = None
+    ) -> None:
+        size = len(key) + len(payload) + self._coverage_size(coverage)
         if self._closed or size > min(self.max_bytes, 128 * 1024):
             return
-        previous = self._entries.pop(key, None)
-        if previous is not None:
-            self._bytes -= len(key) + len(previous[1])
+        self._discard(key)
         # 键数量也有限制，字节计数外的字典开销不会无限增长。
         while self._entries and (self._bytes + size > self.max_bytes or len(self._entries) >= 1024):
-            old_key, (_, old_payload) = self._entries.popitem(last=False)
-            self._bytes -= len(old_key) + len(old_payload)
+            self._discard(next(iter(self._entries)))
         self._entries[key] = (self.clock() + self.ttl, payload)
         self._bytes += size
+        if coverage is not None:
+            group, start, end, complete = coverage
+            self._coverage[key] = coverage
+            self._ranges.setdefault(group, {})[key] = (start, end, complete)
+
+    @staticmethod
+    def _coverage_size(coverage: tuple[str, str, str, bool] | None) -> int:
+        return len(json.dumps(coverage).encode()) if coverage is not None else 0
+
+    def _discard(self, key: str) -> None:
+        entry = self._entries.pop(key, None)
+        if entry is None:
+            return
+        coverage = self._coverage.pop(key, None)
+        self._bytes -= len(key) + len(entry[1]) + self._coverage_size(coverage)
+        if coverage is not None:
+            group = coverage[0]
+            self._ranges[group].pop(key)
+            if not self._ranges[group]:
+                self._ranges.pop(group)
 
     def close(self) -> None:
         with self._lock:
             self._closed = True
             self._entries.clear()
+            self._ranges.clear()
+            self._coverage.clear()
             self._bytes = 0

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import cast
 
 from relationship_query.contracts import FactView, PathRequest, RelationScope, SearchRequest
-from relationship_query.domain.graph_relations import PROOF_PAIR_BATCH, GraphProof
+from relationship_query.domain.graph_relations import PROOF_PAIR_BATCH, GraphProof, NeighborBlock
 from relationship_query.domain.models import Person, RelationType
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_client import GraphClient
@@ -503,21 +503,38 @@ class MaterializedGraphRepository:
                 None, self.client, budget, cache=self.cache
             ).shortest_connections(reference, candidates, request)
 
-    def neighbor_page(
+    def neighbor_block(
         self,
         reference: str,
         scope: RelationScope,
         after: str | None,
         budget: PathBudget,
         size: int = 128,
-    ) -> list[str]:
-        return self.cache.get_or_compute(
-            ["neighbors", reference, relation_scope_key(scope), after, size],
+    ) -> NeighborBlock:
+        if not 1 <= size <= 128:
+            raise ValueError("候选块大小必须在1至128之间")
+        arguments = ["neighbor-blocks-v1", reference, relation_scope_key(scope), size]
+        cached = self.cache.covering(arguments, after, budget)
+        if cached is not None:
+            block = NeighborBlock.model_validate(cached)
+            return block.model_copy(
+                update={"ids": tuple(key for key in block.ids if not after or key > after)}
+            )
+        ids = self._neighbor_ids(reference, scope, after, budget, size)
+        if ids != sorted(set(ids)) or len(ids) > size + 1 or (after and ids and ids[0] <= after):
+            raise QueryError("GRAPH_INTEGRITY", "关联人物游标顺序异常", 503)
+        block = NeighborBlock(ids=tuple(ids[:size]), has_more=len(ids) > size)
+        self.cache.store_range(
+            arguments,
+            after,
+            block.ids[-1] if block.ids else after or "",
+            not block.has_more,
+            block.model_dump(mode="json"),
             budget,
-            lambda: self._neighbor_page(reference, scope, after, budget, size),
         )
+        return block
 
-    def _neighbor_page(
+    def _neighbor_ids(
         self,
         reference: str,
         scope: RelationScope,
@@ -555,10 +572,7 @@ class MaterializedGraphRepository:
             budget,
             size + 1,
         )
-        ids = [row["person_id"] for row in rows]
-        if ids != sorted(set(ids)) or (after is not None and ids and ids[0] <= after):
-            raise QueryError("GRAPH_INTEGRITY", "关联人物游标顺序异常", 503)
-        return ids
+        return [row["person_id"] for row in rows]
 
     def _traversal_page(
         self,
@@ -582,10 +596,7 @@ class MaterializedGraphRepository:
             + f" | ORDER BY $-.person_id | LIMIT {size + 1}"
         )
         rows = self.client.execute(statement, budget, size + 1)
-        ids = [row["person_id"] for row in rows]
-        if ids != sorted(set(ids)) or (after is not None and ids and ids[0] <= after):
-            raise QueryError("GRAPH_INTEGRITY", "多跳人物游标顺序异常", 503)
-        return ids
+        return [row["person_id"] for row in rows]
 
     def connected(self, reference: str, candidate: str, scope: RelationScope) -> bool:
         budget = PathBudget(3000, 5000)

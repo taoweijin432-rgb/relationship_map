@@ -8,7 +8,7 @@ from relationship_query.contracts import (
     RelationScope,
     SearchRequest,
 )
-from relationship_query.domain.graph_relations import GraphProof
+from relationship_query.domain.graph_relations import GraphProof, NeighborBlock
 from relationship_query.domain.models import Entity, Person
 from relationship_query.domain.path_budget import PathBudget
 
@@ -71,6 +71,15 @@ class MaterializedRelationReader(GraphRelationReader, Protocol):
 
 
 class MaterializedRelationRepository(Protocol):
+    def neighbor_block(
+        self,
+        reference: str,
+        scope: RelationScope,
+        after: str | None,
+        budget: PathBudget,
+        size: int = 128,
+    ) -> NeighborBlock: ...
+
     def shortest_connections(
         self, reference: str, candidates: list[str], request: SearchRequest, budget: PathBudget
     ) -> dict[str, list[str]]: ...

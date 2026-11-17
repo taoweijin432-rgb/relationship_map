@@ -9,6 +9,11 @@ from relationship_query.domain.models import DomainModel, Month, RelationType
 PROOF_PAIR_BATCH = 16
 
 
+class NeighborBlock(DomainModel):
+    ids: tuple[str, ...]
+    has_more: bool
+
+
 class GraphProof(DomainModel):
     left_person: str
     right_person: str
