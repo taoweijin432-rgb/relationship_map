@@ -13,6 +13,7 @@ from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure import graph_sessions
 from relationship_query.infrastructure.graph_client import GraphClient, GraphDependencyError
 from relationship_query.infrastructure.graph_model import ProjectionManifest, ReaderCredentials
+from relationship_query.runtime.diagnostics import DiagnosticTrace, capture
 
 
 def graph_client() -> GraphClient:
@@ -112,6 +113,116 @@ def test_four_workers_use_exclusive_bounded_sessions(transport):
     finally:
         graph.close()
     assert all(item.closed for item in transport)
+
+
+@pytest.mark.parametrize("idle_seconds", [299.999, 300.0, 301.0])
+def test_idle_session_retires_at_boundary_before_query_without_retry(
+    transport, monkeypatch, idle_seconds
+):
+    elapsed = [0.0]
+    monkeypatch.setattr(graph_sessions, "monotonic", lambda: elapsed[0])
+    graph = graph_client()
+    try:
+        graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        elapsed[0] = idle_seconds
+        budget, trace = PathBudget(3000, 100), DiagnosticTrace()
+        with capture(trace):
+            assert graph.execute("YIELD 1", budget, 1) == [{"value": 1}]
+        retired = idle_seconds >= 300
+        assert len(transport) == (2 if retired else 1)
+        assert transport[0].closed == retired
+        assert budget.graph_calls == 1
+        assert trace.observations.get("graph.session_idle_retired", 0) == int(retired)
+        if retired:
+            assert transport[0].calls == 1
+    finally:
+        graph.close()
+
+
+def test_session_idle_clock_starts_after_return_not_creation(transport, monkeypatch):
+    elapsed = [0.0]
+    monkeypatch.setattr(graph_sessions, "monotonic", lambda: elapsed[0])
+    graph = graph_client()
+    try:
+        session = graph.sessions.borrow(PathBudget(3000, 100))
+        elapsed[0] = 301
+        assert not session.closed
+        graph.sessions.give_back(session, reusable=True)
+        elapsed[0] = 302
+        graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        assert len(transport) == 1 and not session.closed
+    finally:
+        graph.close()
+
+
+def test_idle_retirement_rechecks_budget_before_authentication(transport, monkeypatch):
+    elapsed = [0.0]
+    monkeypatch.setattr(graph_sessions, "monotonic", lambda: elapsed[0])
+    graph = graph_client()
+    try:
+        graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        elapsed[0] = 301
+        original = transport[0].release
+
+        def release():
+            original()
+            elapsed[0] += 0.1
+
+        transport[0].release = release
+        budget = PathBudget(50, 100, clock=lambda: elapsed[0])
+        with pytest.raises(PathBudgetExceeded):
+            graph.execute("YIELD 1", budget, 1)
+        assert len(transport) == 1 and transport[0].closed
+        assert all(graph.slots.acquire(blocking=False) for _ in range(4))
+        for _ in range(4):
+            graph.slots.release()
+    finally:
+        graph.close()
+
+
+def test_close_during_idle_retirement_has_no_state_lock_or_new_auth(transport, monkeypatch):
+    elapsed = [0.0]
+    monkeypatch.setattr(graph_sessions, "monotonic", lambda: elapsed[0])
+    graph = graph_client()
+    try:
+        graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        elapsed[0] = 301
+        original = transport[0].release
+
+        def release():
+            assert graph.sessions._state.acquire(blocking=False)
+            graph.sessions._state.release()
+            graph.close()
+            original()
+
+        transport[0].release = release
+        with pytest.raises(GraphDependencyError):
+            graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        assert len(transport) == 1 and transport[0].closed
+    finally:
+        graph.close()
+
+
+def test_concurrent_idle_replacement_keeps_exclusive_four_session_limit(transport, monkeypatch):
+    elapsed = [0.0]
+    monkeypatch.setattr(graph_sessions, "monotonic", lambda: elapsed[0])
+    graph = graph_client()
+    try:
+        idle = [graph.sessions.borrow(PathBudget(3000, 100)) for _ in range(4)]
+        for session in idle:
+            graph.sessions.give_back(session, reusable=True)
+        elapsed[0] = 301
+        with ThreadPoolExecutor(max_workers=4) as workers:
+            results = list(
+                workers.map(lambda _: graph.execute("YIELD 1", PathBudget(3000, 100), 1), range(4))
+            )
+        assert results == [[{"value": 1}]] * 4
+        # 最旧会话可能尚留在LIFO栈底，下次取出时必须回收；关闭会收回所有剩余资源。
+        assert len(transport) <= 8
+        assert all(session.calls == 0 for session in idle)
+    finally:
+        graph.close()
+    assert all(session.closed for session in transport)
 
 
 @pytest.mark.parametrize("code", [-1002, -1003])

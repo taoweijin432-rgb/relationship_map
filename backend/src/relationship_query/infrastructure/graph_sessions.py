@@ -18,8 +18,11 @@ from nebula3.gclient.net.Connection import Connection  # type: ignore[import-unt
 
 from relationship_query.domain.path_budget import PathBudget
 from relationship_query.infrastructure.graph_model import ReaderCredentials
+from relationship_query.runtime.diagnostics import observe
 
 logger = logging.getLogger("relationship_query.graph")
+# 当前图服务8小时关闭空闲连接；借用前提前回收，避免隔夜首个请求使用已断开的流。
+MAX_IDLE_SECONDS = 300.0
 
 
 def remaining_ms(budget: PathBudget) -> int:
@@ -99,28 +102,23 @@ class GraphSession:
 class GraphSessionPool:
     def __init__(self, credentials: ReaderCredentials) -> None:
         self.credentials = credentials
-        self._idle: list[GraphSession] = []
+        self._idle: list[tuple[GraphSession, float]] = []
         self._state = Lock()
         self._creation = Lock()
         self._closed = False
 
     def borrow(self, budget: PathBudget) -> GraphSession:
-        with self._state:
-            if self._closed:
-                raise RuntimeError("Graph session pool is closed")
-            if self._idle:
-                return self._idle.pop()
+        session = self._take_idle(budget)
+        if session is not None:
+            return session
         # GraphClient的4个名额同时覆盖借用、创建和执行，创建锁不会额外扩张容量。
         if not self._creation.acquire(timeout=max(0, budget.deadline - budget.clock())):
             budget.check()
             raise RuntimeError("Graph session creation timed out")
         try:
-            budget.check()
-            with self._state:
-                if self._closed:
-                    raise RuntimeError("Graph session pool is closed")
-                if self._idle:
-                    return self._idle.pop()
+            session = self._take_idle(budget)
+            if session is not None:
+                return session
             session = GraphSession(self.credentials, budget)
             with self._state:
                 if self._closed:
@@ -130,10 +128,25 @@ class GraphSessionPool:
         finally:
             self._creation.release()
 
+    def _take_idle(self, budget: PathBudget) -> GraphSession | None:
+        while True:
+            budget.check()
+            with self._state:
+                if self._closed:
+                    raise RuntimeError("Graph session pool is closed")
+                if not self._idle:
+                    return None
+                session, returned_at = self._idle.pop()
+            if monotonic() - returned_at < MAX_IDLE_SECONDS:
+                return session
+            # 注销有独立的短I/O超时，不持状态锁；下轮先检查预算，不能重开请求截止时间。
+            session.release()
+            observe("graph.session_idle_retired")
+
     def give_back(self, session: GraphSession, *, reusable: bool) -> None:
         with self._state:
             if reusable and not self._closed:
-                self._idle.append(session)
+                self._idle.append((session, monotonic()))
                 return
         if reusable:
             session.release()
@@ -144,5 +157,5 @@ class GraphSessionPool:
         with self._state:
             self._closed = True
             idle, self._idle = self._idle, []
-        for session in idle:
+        for session, _ in idle:
             session.release()
