@@ -9,6 +9,7 @@ from relationship_query.infrastructure.graph_projection import ProjectionWriter
 from relationship_query.infrastructure.nebula_lab import query
 from relationship_query.infrastructure.source_read_model import source_digest
 from relationship_query.infrastructure.uuid_source import FACT_TYPES, MODEL
+from relationship_query.runtime.diagnostics import stage
 
 RELATIONS = {
     "same_company": ("worked_at", "company"),
@@ -100,21 +101,23 @@ def calculate_relations(
                         properties=item,
                     )
                 )
-    rows.sort(
-        key=lambda e: (
-            e["type"],
-            e["source"],
-            e["target"],
-            e["properties"]["entity_vid"],
-            e["properties"]["left_fact_rank"],
-            e["properties"]["right_fact_rank"],
+    with stage("Build.sort_relations"):
+        rows.sort(
+            key=lambda e: (
+                e["type"],
+                e["source"],
+                e["target"],
+                e["properties"]["entity_vid"],
+                e["properties"]["left_fact_rank"],
+                e["properties"]["right_fact_rank"],
+            )
         )
-    )
-    counters: Counter[tuple] = Counter()
-    for row in rows:
-        key = row["type"], row["source"], row["target"]
-        counters[key] += 1
-        row["rank"] = counters[key]
+    with stage("Build.rank_relations"):
+        counters: Counter[tuple] = Counter()
+        for row in rows:
+            key = row["type"], row["source"], row["target"]
+            counters[key] += 1
+            row["rank"] = counters[key]
     return rows
 
 
