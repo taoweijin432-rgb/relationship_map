@@ -37,7 +37,7 @@ from relationship_query.services.query_plan import (
     store_plan,
 )
 
-Cost = Literal["heavy", "light", "control"]
+Cost = Literal["heavy", "assembly", "light", "guard", "control"]
 T = TypeVar("T")
 logger = logging.getLogger("relationship_query.admission")
 
@@ -61,7 +61,7 @@ class AdmissionLimits:
     def __post_init__(self) -> None:
         if not (
             2 <= self.workers <= 4
-            and 1 <= self.heavy < self.workers
+            and 1 <= self.heavy <= max(1, self.workers - 2)
             and 1 <= self.light < self.workers
             and 0 <= self.heavy_queue <= 16
             and 0 <= self.light_queue <= 16
@@ -107,10 +107,12 @@ class QueryAdmission:
         self._condition = asyncio.Condition()
         self._queues: dict[Cost, deque[object]] = {
             "heavy": deque(),
+            "assembly": deque(),
             "light": deque(),
+            "guard": deque(),
             "control": deque(),
         }
-        self._active: dict[Cost, int] = {"heavy": 0, "light": 0, "control": 0}
+        self._active: dict[Cost, int] = dict.fromkeys(self._queues, 0)
         self._jobs: dict[str, _Job] = {}
         self._flights: dict[str, _Flight] = {}
         self._followers = self._inflight = 0
@@ -141,10 +143,14 @@ class QueryAdmission:
             "control_inflight": self._control_inflight,
             "followers": self._followers,
             "heavy_active": self._active["heavy"],
+            "assembly_active": self._active["assembly"],
             "light_active": self._active["light"],
+            "guard_active": self._active["guard"],
             "control_active": self._active["control"],
             "heavy_waiting": len(self._queues["heavy"]),
+            "assembly_waiting": len(self._queues["assembly"]),
             "light_waiting": len(self._queues["light"]),
+            "guard_waiting": len(self._queues["guard"]),
             "control_waiting": len(self._queues["control"]),
             "jobs": len(self._jobs),
             "flights": len(self._flights),
@@ -301,7 +307,9 @@ class QueryAdmission:
         queue = self._queues[job.cost]
         maximum = {
             "heavy": self.limits.heavy_queue,
+            "assembly": self.limits.light_queue,
             "light": self.limits.light_queue,
+            "guard": self.limits.inflight,
             "control": 2,
         }[job.cost]
         started = perf_counter()
@@ -314,8 +322,13 @@ class QueryAdmission:
                 raise busy()
             queue.append(ticket)
             try:
-                deadline = min(
-                    self.limits.queue_seconds, max(0, job.budget.deadline - job.budget.clock())
+                remaining = max(0, job.budget.deadline - job.budget.clock())
+                # 已选定计划的装配和短版本检查只受原请求截止限制；不能在每阶段
+                # 重开300ms短等待，导致读取完成后又在末尾校验丢弃响应。
+                deadline = (
+                    remaining
+                    if job.cost in ("assembly", "guard")
+                    else min(self.limits.queue_seconds, remaining)
                 )
                 async with asyncio.timeout(deadline):
                     while queue[0] is not ticket or not self._available(job.cost):
@@ -332,11 +345,22 @@ class QueryAdmission:
                 self._condition.notify_all()
 
     def _available(self, cost: Cost) -> bool:
-        if cost == "control":
-            return self._active[cost] < 1 and sum(self._active.values()) < self.limits.workers
+        if cost in ("control", "guard"):
+            # 短文件签名检查复用保留线程；有健康任务排队时先让其执行。
+            return (
+                self._active["control"] + self._active["guard"] == 0
+                and (cost == "control" or not self._queues["control"])
+                and sum(self._active.values()) < self.limits.workers
+            )
+        compute = self._active["heavy"] + self._active["assembly"]
+        regular = compute + self._active["light"]
         limit = self.limits.heavy if cost == "heavy" else max(1, self.limits.light - 1)
-        regular = self._active["heavy"] + self._active["light"]
-        return self._active[cost] < limit and regular < self.limits.workers - 1
+        # 关系计算／装配共享受限名额，另保留普通候选执行机会；总计仍最多4线程。
+        return (
+            self._active[cost] < limit
+            and regular < self.limits.workers - 1
+            and (cost == "light" or compute < max(1, self.limits.workers - 2))
+        )
 
     async def close(self) -> None:
         self._closed = True

@@ -24,7 +24,7 @@ from relationship_query.runtime.admission import Cost, QueryAdmission
 from relationship_query.services.materialized_query import MaterializedQueryService
 from relationship_query.services.paths import PathService
 from relationship_query.services.query import QueryError, QueryService
-from relationship_query.services.query_plan import prepared_plan
+from relationship_query.services.query_plan import PersonPagePlan, prepared_plan
 
 T = TypeVar("T")
 
@@ -86,17 +86,20 @@ class QueryDispatch:
         if not isinstance(self.query, MaterializedQueryService) or reference is None:
             return await self.run("heavy" if reference else "light", operation)
         query = self.query
-        await self.run("light", partial(query.require_person, reference))
         key = query.plan_key(body, reference)
-        plan = await self.admission.page_plan(
-            key, partial(query.select_page, body, reference), getattr(query.graph, "cache", None)
-        )
+
+        def select() -> PersonPagePlan:
+            # 冷计划先检查身份；热计划的装配本身会实时检查，不再提前重复回源。
+            query.require_person(reference)
+            return query.select_page(body, reference)
+
+        plan = await self.admission.page_plan(key, select, getattr(query.graph, "cache", None))
 
         def assemble() -> T:
             with prepared_plan(plan):
                 return self._verified(operation)
 
-        return await self.run("light", assemble)
+        return await self.run("assembly", assemble)
 
     def _verified(self, operation: Callable[[], T]) -> T:
         if isinstance(self.query, MaterializedQueryService):

@@ -69,9 +69,7 @@ def test_real_routes_reject_full_heavy_queue_and_preserve_health_and_light_reads
                         json={"reference_id": "p:000001"},
                     )
                     assert detail.status_code == 503 and detail.json()["code"] == "GRAPH_BUSY"
-                    plain_detail = await client.post(
-                        "/api/v1/persons/p:000002/details", json={}
-                    )
+                    plain_detail = await client.post("/api/v1/persons/p:000002/details", json={})
                     assert plain_detail.status_code == 200, plain_detail.text
                     for path in ("/api/v1/health", "/api/v1/meta", "/api/v1/persons/suggest"):
                         response = await client.get(path)
@@ -251,3 +249,54 @@ def test_source_guard_failure_never_sends_the_buffered_success(client, monkeypat
     response = client.get("/api/v1/meta")
     assert response.status_code == 409 and response.json()["code"] == "DATA_VERSION_CHANGED"
     assert calls == [1, 1]
+
+
+def test_long_assembly_does_not_block_real_suggestions_or_final_source_guard(tmp_path):
+    async def scenario():
+        app = app_for(tmp_path)
+        async with app.router.lifespan_context(app):
+            admission = app.state.admission
+            loop = asyncio.get_running_loop()
+            entered = [asyncio.Event(), asyncio.Event()]
+            release = Event()
+            checks = []
+
+            class Guard:
+                def verify_snapshot(self):
+                    checks.append(1)
+
+            app.state.source_guard = Guard()
+
+            def blocked(index):
+                loop.call_soon_threadsafe(entered[index].set)
+                assert release.wait(2)
+
+            tasks = [
+                asyncio.create_task(admission.execute("assembly", lambda i=i: blocked(i)))
+                for i in range(2)
+            ]
+            try:
+                await asyncio.gather(*(event.wait() for event in entered))
+                async with httpx.AsyncClient(
+                    transport=httpx.ASGITransport(app), base_url="http://test"
+                ) as client:
+                    responses = await asyncio.gather(
+                        *[
+                            client.get(path)
+                            for path in (
+                                "/api/v1/persons/suggest",
+                                "/api/v1/health",
+                                "/api/v1/meta",
+                            )
+                        ]
+                    )
+                assert all(response.status_code == 200 for response in responses)
+                assert len(checks) == 6, "前后版本检查不能被跳过"
+                assert admission.snapshot()["assembly_active"] == 2
+            finally:
+                release.set()
+                await asyncio.gather(*tasks)
+            await wait_state(admission, "jobs", 0)
+            assert all(value == 0 for value in admission.snapshot().values())
+
+    asyncio.run(scenario())

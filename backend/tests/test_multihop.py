@@ -747,3 +747,78 @@ def test_native_topology_calculation_does_not_hold_sql_connection(native_chain, 
     monkeypatch.setattr(MaterializedReader, "_shortest_connections", checked)
     result = call(native_chain, "/persons/p:expert:1/relations/search", {"max_hops": 4})
     assert result["items"] and calls == [1]
+
+
+def test_native_warm_plan_keeps_live_reference_check_without_duplicate_precheck(
+    native_chain, monkeypatch
+):
+    from relationship_query.runtime.relation_cache import RelationCache
+    from relationship_query.services.query import QueryError
+
+    service = native_chain.app.state.query_service
+    monkeypatch.setattr(service.graph, "cache", RelationCache("warm-reference-check"))
+    filters = {"max_hops": 4, "relation_type": "same_company", "page_size": 2}
+    reference = "p:expert:1"
+    calls = []
+    original = service.require_person
+
+    def checked(identity):
+        calls.append(identity)
+        return original(identity)
+
+    monkeypatch.setattr(service, "require_person", checked)
+    first = call(native_chain, f"/persons/{reference}/relations/search", filters)
+    assert calls == [reference, reference], "冷计划及其展示分别校验"
+    calls.clear()
+    assert call(native_chain, f"/persons/{reference}/relations/search", filters) == first
+    assert calls == [reference], "热计划仍实时校验，但不再提前重复读取"
+
+    def removed(identity):
+        raise QueryError("PERSON_NOT_FOUND", "test-only invalidated reference", 404)
+
+    monkeypatch.setattr(service, "require_person", removed)
+    response = native_chain.post(f"/api/v1/persons/{reference}/relations/search", json=filters)
+    assert response.status_code == 404 and response.json()["code"] == "PERSON_NOT_FOUND"
+
+
+@pytest.mark.parametrize("concurrency", [4, 8])
+def test_native_warm_parallel_assembly_with_simulated_slow_display_io(
+    native_chain, monkeypatch, concurrency
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from time import sleep
+
+    from relationship_query.runtime.relation_cache import RelationCache
+
+    service = native_chain.app.state.query_service
+    monkeypatch.setattr(service.graph, "cache", RelationCache("slow-display-io"))
+    endpoint = "/persons/p:expert:1/relations/search"
+    filters = {"max_hops": 4, "relation_type": "same_company", "page_size": 2}
+    expected = call(native_chain, endpoint, filters)
+    original = service.repository.persons
+
+    def delayed(ids):
+        # 真实图与SQL结果不替换，仅模拟超过旧300ms队列等待的展示I/O。
+        sleep(0.35)
+        return original(ids)
+
+    monkeypatch.setattr(service.repository, "persons", delayed)
+    started = perf_counter()
+    with ThreadPoolExecutor(max_workers=concurrency) as workers:
+        futures = [
+            workers.submit(call, native_chain, endpoint, filters) for _ in range(concurrency)
+        ]
+        results = [future.result(timeout=5) for future in futures]
+    assert results == [expected] * concurrency
+    assert all(value == 0 for value in native_chain.app.state.admission.snapshot().values())
+    assert service.repository.engine.pool.checkedout() == 0
+    native_chain.app.state.multihop_observations.append(
+        {
+            "case": "simulated_350ms_display_io",
+            "concurrency": concurrency,
+            "success": len(results),
+            "complete_response_matched": True,
+            "elapsed_ms": round((perf_counter() - started) * 1000, 2),
+            "resources_drained": True,
+        }
+    )

@@ -133,7 +133,7 @@ class QueryHTTPMiddleware:
             return {"type": "http.disconnect"}
 
         task = asyncio.create_task(
-            self._dispatch(request, replay, "control" if protected else "light")
+            self._dispatch(request, replay, "control" if protected else "guard")
         )
 
         async def watch() -> None:
