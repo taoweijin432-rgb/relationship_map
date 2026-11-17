@@ -14,7 +14,7 @@ from relationship_query.domain.path_budget import PathBudgetExceeded, shared_rel
 from relationship_query.infrastructure.mysql import TLSConnection, _open_mysql_engine
 from relationship_query.infrastructure.real_api import RealGraphRepository
 from relationship_query.infrastructure.sql_repository import prefix_match
-from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.diagnostics import observe, traced
 from relationship_query.runtime.person_reads import current_person_reads
 from relationship_query.services.query import QueryError
 from relationship_query.update.source_config import MySQLSourceConfig
@@ -120,6 +120,7 @@ class MySQLPeople:
             ) from None
         return result
 
+    @traced("MySQLPeople.suggestions")
     def suggestions(self, source: Source, keyword: str, after: str | None) -> list[Person]:
         table = self.tables[source]
         query = select(table).where(table.c.deleted_at.is_(None))
@@ -135,10 +136,13 @@ class MySQLPeople:
             )
         try:
             with self.engine.connect() as connection:
-                return [
+                people = [
                     self._person(source, dict(row))
                     for row in connection.execute(query.order_by(identity).limit(128)).mappings()
                 ]
+            observe("people.suggestion_pages")
+            observe("people.suggestion_candidates", len(people))
+            return people
         except SQLAlchemyError:
             raise QueryError(
                 "PERSON_SOURCE_UNAVAILABLE", "人物来源暂不可用，请稍后重试", 503
