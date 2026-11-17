@@ -76,6 +76,10 @@ RELATIONSHIP_QUERY_LOG_LEVEL=INFO
 
 ## 运行配置与服务
 
+本地Nginx候选模板`infra/nginx/relationship-map-nightly.conf`已补充JS／CSS／JSON压缩、带hash资源长期缓存及HTML重验证，API明确`no-store`，保留业务503与维护503的区别。测试服尚未安装这轮配置。部署时保留服务器实际`root`、监听端口及其他站点设置，先暂存并通过`nginx -t`，再reload。
+
+前端继续在服务器构建独立候选目录。切换Nginx前，使用`backend/.venv/bin/python scripts/retain_frontend_assets.py --previous <当前静态目录> --candidate <新构建目录>`保留旧页面依赖的分包；工具不会替换候选HTML或覆盖不同内容的同名资源。默认合并上限256MiB／10000文件，超限明确失败，需要评估历史资源后再交付，不自动删除旧分包或改动当前服务目录。
+
 服务器私有配置位于 `/etc/relationship-map`。
 
 | 配置文件 | 用途 |
