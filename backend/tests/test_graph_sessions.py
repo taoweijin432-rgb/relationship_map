@@ -1,7 +1,9 @@
 """独占复用、失效恢复、截止时间及关闭时在途会话的回归。"""
 
+import os
+import socket
 from concurrent.futures import ThreadPoolExecutor
-from threading import Event, Lock
+from threading import Event, Lock, Thread
 from time import sleep
 
 import pytest
@@ -13,7 +15,7 @@ from relationship_query.infrastructure.graph_client import GraphClient, GraphDep
 from relationship_query.infrastructure.graph_model import ProjectionManifest, ReaderCredentials
 
 
-def client() -> GraphClient:
+def graph_client() -> GraphClient:
     manifest = ProjectionManifest(
         space="relationship_lab_sessions",
         projection_id="test",
@@ -84,7 +86,7 @@ def transport(monkeypatch):
 
 
 def test_reuses_one_session_and_closes_idempotently(transport):
-    graph = client()
+    graph = graph_client()
     for _ in range(10):
         assert graph.execute("YIELD 1", PathBudget(3000, 100), 1) == [{"value": 1}]
     assert len(transport) == 1 and transport[0].calls == 10
@@ -96,7 +98,7 @@ def test_reuses_one_session_and_closes_idempotently(transport):
 
 
 def test_four_workers_use_exclusive_bounded_sessions(transport):
-    graph = client()
+    graph = graph_client()
     try:
 
         def worker(_):
@@ -114,7 +116,7 @@ def test_four_workers_use_exclusive_bounded_sessions(transport):
 
 @pytest.mark.parametrize("code", [-1002, -1003])
 def test_expired_session_retries_once_with_new_identity(transport, code):
-    graph = client()
+    graph = graph_client()
     try:
         graph.execute("YIELD 1", PathBudget(3000, 100), 1)
         transport[0].action = lambda: Result(code)
@@ -126,34 +128,46 @@ def test_expired_session_retries_once_with_new_identity(transport, code):
         graph.close()
 
 
-def test_broken_transport_is_logged_without_statement_or_credentials(transport, caplog):
+@pytest.mark.parametrize("raw_thrift", [False, True])
+def test_broken_transport_is_logged_without_statement_or_credentials(transport, caplog, raw_thrift):
     from nebula3.Exception import IOErrorException
+    from nebula3.fbthrift.transport.TTransport import TTransportException
 
-    graph = client()
+    graph = graph_client()
     try:
         graph.execute("YIELD 1", PathBudget(3000, 100), 1)
 
         def broken():
+            if raw_thrift:
+                raise TTransportException(TTransportException.END_OF_FILE, "sensitive detail")
             raise IOErrorException(IOErrorException.E_CONNECT_BROKEN, "sensitive detail")
 
         transport[0].action = broken
         with pytest.raises(GraphDependencyError):
             graph.execute("YIELD 'sensitive statement'", PathBudget(3000, 100), 1)
-        assert "graph dependency failure: IOErrorException type=" in caplog.text
+        name = "TTransportException" if raw_thrift else "IOErrorException"
+        assert f"graph dependency failure: {name} type=" in caplog.text
         assert "sensitive" not in caplog.text
         assert transport[0].discarded
+        assert len(transport) == 1
+        graph.execute("YIELD 1", PathBudget(3000, 100), 1)
+        assert len(transport) == 2
     finally:
         graph.close()
 
 
-def test_timeout_discards_connection_without_retry_and_next_request_recovers(transport):
+@pytest.mark.parametrize("raw_thrift", [False, True])
+def test_timeout_discards_connection_without_retry_and_next_request_recovers(transport, raw_thrift):
     from nebula3.Exception import IOErrorException
+    from nebula3.fbthrift.transport.TTransport import TTransportException
 
-    graph = client()
+    graph = graph_client()
     try:
         graph.execute("YIELD 1", PathBudget(3000, 100), 1)
 
         def timeout():
+            if raw_thrift:
+                raise TTransportException(TTransportException.TIMED_OUT, "test timeout")
             raise IOErrorException(IOErrorException.E_TIMEOUT, "test timeout")
 
         transport[0].action = timeout
@@ -166,8 +180,94 @@ def test_timeout_discards_connection_without_retry_and_next_request_recovers(tra
         graph.close()
 
 
+@pytest.mark.parametrize("timeout", [False, True])
+def test_raw_handshake_failure_closes_socket_releases_creation_lock_and_http_maps_error(
+    monkeypatch, client, timeout, caplog
+):
+    from nebula3.fbthrift.transport.TTransport import TTransportException
+
+    events = []
+
+    class BrokenConnection:
+        def open(self, _host, _port, _timeout):
+            events.append("open")
+            code = TTransportException.TIMED_OUT if timeout else TTransportException.END_OF_FILE
+            raise TTransportException(code, "private handshake detail")
+
+        def close(self):
+            events.append("close")
+
+    monkeypatch.setattr(graph_sessions, "DeadlineConnection", BrokenConnection)
+    # 使用真实GraphSession构造及GraphClient边界，SQL业务仅作为实际HTTP承载。
+    graph = graph_client()
+    try:
+
+        def operation(*_args):
+            return graph.execute("YIELD 'private statement'", PathBudget(3000, 100), 1)
+
+        monkeypatch.setattr(client.app.state.query_service, "search", operation)
+        response = client.post("/api/v1/persons/search", json={})
+        assert response.status_code == 503
+        assert response.json()["code"] == ("GRAPH_QUERY_LIMIT" if timeout else "GRAPH_UNAVAILABLE")
+        assert events == ["open", "close"]  # 不自动重试握手断流或超时。
+        assert graph.sessions._creation.acquire(blocking=False)
+        graph.sessions._creation.release()
+        assert all(graph.slots.acquire(blocking=False) for _ in range(4))
+        for _ in range(4):
+            graph.slots.release()
+        assert "private" not in response.text and "private" not in caplog.text
+    finally:
+        graph.close()
+
+
+@pytest.mark.skipif(
+    os.environ.get("RELATIONSHIP_GRAPH_TEST") != "1", reason="显式启用本机TCP握手故障验收"
+)
+@pytest.mark.parametrize("timeout", [False, True])
+def test_actual_sdk_handshake_disconnect_and_timeout_are_bounded(timeout):
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    listener.settimeout(2)
+    stop, received = Event(), Event()
+    errors = []
+
+    def server():
+        try:
+            with listener.accept()[0] as connection:
+                connection.settimeout(2)
+                if connection.recv(4096):
+                    received.set()
+                if timeout:
+                    stop.wait(2)
+        except OSError as error:
+            errors.append(type(error).__name__)
+
+    worker = Thread(target=server)
+    graph = graph_client()
+    # 固定凭据模型不为实验放宽；仅本次独立客户端连接实际临时监听端口。
+    graph.sessions.credentials = graph.credentials.model_copy(
+        update={"port": listener.getsockname()[1]}
+    )
+    worker.start()
+    try:
+        expected = PathBudgetExceeded if timeout else GraphDependencyError
+        with pytest.raises(expected):
+            graph.execute("YIELD 1", PathBudget(200, 100), 1)
+        assert received.is_set()
+        assert all(graph.slots.acquire(blocking=False) for _ in range(4))
+        for _ in range(4):
+            graph.slots.release()
+    finally:
+        stop.set()
+        listener.close()
+        worker.join(timeout=3)
+        graph.close()
+    assert not worker.is_alive() and not errors
+
+
 def test_server_rejection_preserves_connection_without_retry(transport):
-    graph = client()
+    graph = graph_client()
     try:
         graph.execute("YIELD 1", PathBudget(3000, 100), 1)
         transport[0].action = lambda: Result(-1005)
@@ -180,7 +280,7 @@ def test_server_rejection_preserves_connection_without_retry(transport):
 
 
 def test_shutdown_waits_for_borrowed_session_to_return(transport):
-    graph = client()
+    graph = graph_client()
     graph.execute("YIELD 1", PathBudget(3000, 100), 1)
     entered, finish = Event(), Event()
 
@@ -201,7 +301,7 @@ def test_shutdown_waits_for_borrowed_session_to_return(transport):
 
 
 def test_expired_budget_never_creates_a_session(transport):
-    graph = client()
+    graph = graph_client()
     budget = PathBudget(1, 100, clock=lambda: 0)
     budget.clock = lambda: 1
     with pytest.raises(PathBudgetExceeded):
@@ -233,7 +333,7 @@ def test_each_reused_rpc_updates_socket_timeout_from_remaining_budget(monkeypatc
             pass
 
     monkeypatch.setattr(graph_sessions, "DeadlineConnection", Connection)
-    graph = client()
+    graph = graph_client()
     scope = PathBudget(500, 100, clock=lambda: elapsed[0])
     session = graph_sessions.GraphSession(graph.credentials, scope)
     session.execute("YIELD 1", scope)
@@ -277,7 +377,7 @@ def test_authentication_finishing_after_deadline_releases_its_session(monkeypatc
             pass
 
     monkeypatch.setattr(graph_sessions, "DeadlineConnection", Connection)
-    graph = client()
+    graph = graph_client()
     with pytest.raises(PathBudgetExceeded):
         graph_sessions.GraphSession(
             graph.credentials, PathBudget(1000, 100, clock=lambda: clock[0])

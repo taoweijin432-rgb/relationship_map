@@ -14,6 +14,9 @@ from nebula3.Exception import (  # type: ignore[import-untyped]
     NotValidConnectionException,
     NoValidSessionException,
 )
+from nebula3.fbthrift.transport.TTransport import (  # type: ignore[import-untyped]
+    TTransportException,
+)
 
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_model import (
@@ -86,12 +89,17 @@ class GraphClient:
             budget.graph_result(len(rows))
             observe("graph.rows", len(rows))
             return rows
-        except IOErrorException as exc:
-            if exc.type == IOErrorException.E_TIMEOUT:
+        except (IOErrorException, TTransportException) as exc:
+            # SDK握手verifyClientVersion可直接抛出vendored Thrift异常，尚未包装成IOError。
+            # 该版本TSocket也把读超时标作EOF，先依据共享截止时间判断，不解析异常正文。
+            budget.check()
+            if (isinstance(exc, IOErrorException) and exc.type == IOErrorException.E_TIMEOUT) or (
+                isinstance(exc, TTransportException) and exc.type == TTransportException.TIMED_OUT
+            ):
                 raise PathBudgetExceeded("time_limit") from None
             logger.warning(
-                "graph dependency failure: IOErrorException type=%s statement=%s "
-                "elapsed_ms=%s request_id=%s",
+                "graph dependency failure: %s type=%s statement=%s elapsed_ms=%s request_id=%s",
+                type(exc).__name__,
                 exc.type,
                 sha256(statement.encode()).hexdigest()[:16],
                 budget.elapsed_ms(),
