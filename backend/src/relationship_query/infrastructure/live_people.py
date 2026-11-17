@@ -3,14 +3,19 @@
 import os
 import ssl
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import Column, MetaData, String, Table, cast, or_, select, text
+from sqlalchemy import Column, MetaData, String, Table, cast, or_, select, text, true
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from relationship_query.contracts import SearchRequest
 from relationship_query.domain.models import Person, Source
-from relationship_query.domain.path_budget import PathBudgetExceeded, shared_relation_budget
+from relationship_query.domain.path_budget import (
+    PathBudget,
+    PathBudgetExceeded,
+    shared_relation_budget,
+)
 from relationship_query.infrastructure.mysql import TLSConnection, _open_mysql_engine
 from relationship_query.infrastructure.real_api import RealGraphRepository
 from relationship_query.infrastructure.sql_repository import prefix_match
@@ -20,6 +25,7 @@ from relationship_query.services.query import QueryError
 from relationship_query.update.source_config import MySQLSourceConfig
 
 PERSON_TABLES: dict[Source, str] = {"expert": "experts", "resume": "resume"}
+PUBLISHED_ID_BATCH = 8192
 
 
 def open_people_engine(config: MySQLSourceConfig, insecure_tls: bool) -> Engine:
@@ -120,13 +126,29 @@ class MySQLPeople:
             ) from None
         return result
 
-    @traced("MySQLPeople.suggestions")
     def suggestions(self, source: Source, keyword: str, after: str | None) -> list[Person]:
+        identity = cast(self.tables[source].c.id, String)
+        return self._suggest(source, keyword, identity > after if after else true(), 128)
+
+    def suggestions_from_ids(
+        self, source: Source, keyword: str, ids: list[str], limit: int
+    ) -> list[Person]:
+        if not ids:
+            return []
+        if len(ids) > PUBLISHED_ID_BATCH or not 1 <= limit <= 50:
+            raise ValueError("已发布人物搜索批次或返回人数超出边界")
+        prefix = f"p:{source}:"
+        if any(not key.startswith(prefix) for key in ids):
+            raise ValueError("已发布人物ID与来源不一致")
+        keys = [int(key[len(prefix) :]) for key in ids]
+        observe("people.published_id_batch")
+        return self._suggest(source, keyword, self.tables[source].c.id.in_(keys), limit)
+
+    @traced("MySQLPeople.suggestions")
+    def _suggest(self, source: Source, keyword: str, condition: Any, limit: int) -> list[Person]:
         table = self.tables[source]
-        query = select(table).where(table.c.deleted_at.is_(None))
+        query = select(table).where(table.c.deleted_at.is_(None), condition)
         identity = cast(table.c.id, String)
-        if after is not None:
-            query = query.where(identity > after)
         if keyword:
             query = query.where(
                 or_(
@@ -138,7 +160,7 @@ class MySQLPeople:
             with self.engine.connect() as connection:
                 people = [
                     self._person(source, dict(row))
-                    for row in connection.execute(query.order_by(identity).limit(128)).mappings()
+                    for row in connection.execute(query.order_by(identity).limit(limit)).mappings()
                 ]
             observe("people.suggestion_pages")
             observe("people.suggestion_candidates", len(people))
@@ -194,23 +216,15 @@ class LiveRealGraphRepository(RealGraphRepository):
         if not keyword:
             ids = self.search_ids(SearchRequest(page_size=limit), None, None)[:limit]
             return self.persons(ids)
-        found = []
+        found: list[Person] = []
         try:
             with shared_relation_budget() as budget:
-                for source in PERSON_TABLES:
+                for source in sorted(PERSON_TABLES):
                     if source not in self.published_sources:
                         continue
-                    after = None
-                    selected: list[Person] = []
-                    while len(selected) < limit:
-                        budget.check()
-                        page = self.people.suggestions(source, keyword, after)
-                        members = set(self._members([person.id for person in page]))
-                        selected.extend(person for person in page if person.id in members)
-                        if len(page) < 128:
-                            break
-                        after = page[-1].id.split(":")[2]
-                    found.extend(selected[:limit])
+                    found.extend(self._suggest_source(source, keyword, limit - len(found), budget))
+                    if len(found) >= limit:
+                        break
                 budget.check()
         except PathBudgetExceeded as error:
             raise QueryError(
@@ -219,6 +233,54 @@ class LiveRealGraphRepository(RealGraphRepository):
                 503,
             ) from None
         return sorted(found, key=lambda person: person.id)[:limit]
+
+    def _published_ids(self, source: Source, after: str | None) -> tuple[list[str], bool]:
+        prefix = f"p:{source}:"
+        identity = self.tables.people.c.id
+        with self.engine.connect() as connection:
+            ids = list(
+                connection.execute(
+                    select(identity)
+                    .where(
+                        self.tables.people.c.active.is_(True),
+                        identity >= prefix,
+                        identity < prefix + "~",
+                        identity > (after or prefix),
+                    )
+                    .order_by(identity)
+                    .limit(PUBLISHED_ID_BATCH + 1)
+                ).scalars()
+            )
+        return ids[:PUBLISHED_ID_BATCH], len(ids) > PUBLISHED_ID_BATCH
+
+    def _suggest_source(
+        self, source: Source, keyword: str, limit: int, budget: PathBudget
+    ) -> list[Person]:
+        selected: list[Person] = []
+        after, probed = None, False
+        while len(selected) < limit:
+            budget.check()
+            ids, more = self._published_ids(source, after)
+            if not ids:
+                break
+            selected.extend(
+                self.people.suggestions_from_ids(source, keyword, ids, limit - len(selected))
+            )
+            if len(selected) >= limit or not more:
+                break
+            after = ids[-1]
+            if not probed:
+                # 大集合的稀有词只探测一次剩余来源，避免为零结果遍历全部已发布ID。
+                probed = True
+                observe("people.suggestion_probe")
+                page = self.people.suggestions(source, keyword, after.rsplit(":", 1)[1])
+                members = set(self._members([person.id for person in page]))
+                selected.extend(person for person in page if person.id in members)
+                if len(selected) >= limit or len(page) < 128:
+                    break
+                after = page[-1].id
+        budget.check()
+        return selected[:limit]
 
     def search_ids(
         self, request: SearchRequest, reference_id: str | None, after: str | None

@@ -3,19 +3,18 @@
 import hashlib
 import json
 import re
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
 
 from sqlalchemy import event, text
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from relationship_query.benchmark.observe import SQLTrace, capture_sql, observe_engine
-from relationship_query.domain.models import Source
+from relationship_query.benchmark.observe import SQLTrace, Statement, capture_sql, observe_engine
 from relationship_query.infrastructure.live_people import (
     PERSON_TABLES,
     LiveRealGraphRepository,
-    MySQLPeople,
 )
 from relationship_query.runtime.diagnostics import DiagnosticTrace, capture
 from relationship_query.services.query import QueryError
@@ -51,20 +50,26 @@ def plan_summary(value: Any) -> Any:
     }
 
 
-def explain(people: MySQLPeople, source: Source, keyword: str) -> dict[str, Any]:
-    trace = SQLTrace(owns_progress=False)
-    with observe_engine(people.engine), capture_sql(trace):
-        people.suggestions(source, keyword, None)
-    statements = [row for row in trace.statements if row.sql.lstrip().upper().startswith("SELECT")]
-    if len(statements) != 1:
-        raise ValueError("人物来源实际查询应只有一条SELECT，不能用自拟SQL替代")
-    sql, parameters = statements[0].sql, statements[0].parameters
-    with people.engine.connect() as connection:
+def explain_statement(engine: Engine, statement: Statement) -> dict[str, Any]:
+    sql, parameters = statement.sql, statement.parameters
+    with engine.connect() as connection:
         planned = connection.exec_driver_sql("EXPLAIN FORMAT=JSON " + sql, parameters).scalar_one()
         actual = connection.exec_driver_sql("EXPLAIN ANALYZE " + sql, parameters).scalar_one()
-    # TREE仍保留算子、actual rows／loops和计时；删除所有引号内绑定值。
-    actual = re.sub(r"'(?:\\.|''|[^'])*'", "'<value>'", str(actual))
-    return {"estimated": plan_summary(json.loads(planned)), "actual_tree": actual}
+    return {"estimated": plan_summary(json.loads(planned)), "actual_tree": redact_tree(str(actual))}
+
+
+def redact_tree(tree: str) -> str:
+    lines = []
+    for line in tree.splitlines():
+        position = re.search(r"\((?:cost|actual time)=", line)
+        end = position.start() if position else len(line)
+        head = re.sub(r"'(?:\\.|''|[^'])*'", "'<value>'", line[:end])
+        head = re.sub(r"\b[0-9]+\b", "<n>", head)
+        head = re.sub(r"(?:<n>\s*,\s*)+<n>", "<values>", head)
+        if len(head) > 512:
+            head = head[:512] + " ... [predicate omitted] "
+        lines.append(head + line[end:])
+    return "\n".join(lines)
 
 
 def table_profile(connection: Connection, table: str) -> dict[str, Any]:
@@ -115,19 +120,39 @@ def profile(repository: LiveRealGraphRepository, keywords: list[str], limit: int
             "limit": limit,
             "plans": {},
         }
+        sample = search_sample(repository, keyword, limit)
+        result.update(sample.metrics)
         for source in sorted(repository.published_sources):
+            name = re.escape(people.tables[source].name)
+            selected = [
+                row
+                for row in sample.statements
+                if re.search(rf"\bFROM\s+`?{name}`?(?:\s|$)", row.sql, re.IGNORECASE)
+            ]
+            unique = {row.sql: row for row in selected}
             try:
-                result["plans"][source] = explain(people, source, keyword)
+                result["plans"][source] = {
+                    "captured_queries": len(selected),
+                    "queries": [
+                        explain_statement(people.engine, row) for row in list(unique.values())[:2]
+                    ],
+                }
             except (SQLAlchemyError, QueryError, ValueError) as error:
                 # 受源库max_execution_time限制，失败也写入报告，不能当作零行或跳过。
                 result["plans"][source] = {"error": type(error).__name__}
-        result.update(search_sample(repository, keyword, limit))
         report["queries"].append(result)
     return report
 
 
-def search_sample(repository: LiveRealGraphRepository, keyword: str, limit: int) -> dict[str, Any]:
+@dataclass
+class CapturedSearch:
+    metrics: dict[str, Any]
+    statements: list[Statement] = field(repr=False)
+
+
+def search_sample(repository: LiveRealGraphRepository, keyword: str, limit: int) -> CapturedSearch:
     trace = DiagnosticTrace()
+    sql = SQLTrace(owns_progress=False)
     candidate_rows: list[int] = []
 
     def read_rows(_connection: Any, cursor: Any, sql: str, *_args: Any) -> None:
@@ -138,7 +163,7 @@ def search_sample(repository: LiveRealGraphRepository, keyword: str, limit: int)
     started = perf_counter()
     result: dict[str, Any] = {}
     try:
-        with capture(trace):
+        with capture(trace), observe_engine(repository.people.engine), capture_sql(sql):
             repository.verify_snapshot()
             items = repository.suggest_people(keyword, limit)
             repository.verify_snapshot()
@@ -155,4 +180,4 @@ def search_sample(repository: LiveRealGraphRepository, keyword: str, limit: int)
         source_queries=len(candidate_rows),
         candidate_rows=sum(candidate_rows),
     )
-    return result
+    return CapturedSearch(result, sql.statements)

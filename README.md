@@ -78,6 +78,8 @@ RELATIONSHIP_QUERY_LOG_LEVEL=INFO
 
 人物搜索诊断使用`backend/.venv/bin/python scripts/profile_people_search.py --output <私有报告路径>`，读取现有在线MySQL环境与夜间配置，或显式指定`--source-config`和`--release`。它捕获实际运行SQL，再执行只读EXPLAIN／ANALYZE，输出扫描算子、候选分页和发布成员命中计数；不打印人物字段或搜索原文，不改来源表／索引。报告绑定当次发布版本；本机冻结发布配上当前来源时，不能冒充服务器当前发布。真实计划未取得前，不据此宣称搜索已使用或绕过索引。
 
+本地新人物候选搜索按发布ID分批回源，每批最多8192个ID，保持姓名／业务编号匹配、字符串ID排序和实时删除语义；大集合低命中时最多探测一次剩余来源，不再逐页重复扫描全来源。所有阶段共用原请求预算，不把数百万已发布ID拼成一条SQL，不缓存人物展示字段。这轮源查询改造尚未部署测试服。
+
 本地Nginx候选模板`infra/nginx/relationship-map-nightly.conf`已补充JS／CSS／JSON压缩、带hash资源长期缓存及HTML重验证，API明确`no-store`，保留业务503与维护503的区别。测试服尚未安装这轮配置。部署时保留服务器实际`root`、监听端口及其他站点设置，先暂存并通过`nginx -t`，再reload。
 
 前端继续在服务器构建独立候选目录。切换Nginx前，使用`backend/.venv/bin/python scripts/retain_frontend_assets.py --previous <当前静态目录> --candidate <新构建目录>`保留旧页面依赖的分包；工具不会替换候选HTML或覆盖不同内容的同名资源。默认合并上限256MiB／10000文件，超限明确失败，需要评估历史资源后再交付，不自动删除旧分包或改动当前服务目录。

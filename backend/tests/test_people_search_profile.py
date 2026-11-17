@@ -62,12 +62,12 @@ def test_native_actual_query_explain_and_sparse_membership_metrics(real_release)
             report = profile(repository, ["张", "O'Brien"], 50)
             first, empty = report["queries"]
             assert first["passed"] and first["items"] == 1
-            assert first["source_queries"] == 5 and first["candidate_rows"] == 500
+            assert first["source_queries"] == 2 and first["candidate_rows"] == 1
             assert re.search(
-                r"\(actual time=[^)]* rows=500 loops=1\)",
-                first["plans"]["expert"]["actual_tree"],
+                r"\(actual time=[^)]* rows=1 loops=1\)",
+                first["plans"]["expert"]["queries"][0]["actual_tree"],
             )
-            assert "actual" in first["plans"]["expert"]["actual_tree"]
+            assert "actual" in first["plans"]["expert"]["queries"][0]["actual_tree"]
             assert "张" not in str(report) and "O'Brien" not in str(report)
             assert "error" not in first["plans"]["expert"]
             assert empty["passed"] and empty["items"] == 0 and empty["candidate_rows"] == 0
