@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Callable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from contextvars import copy_context
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from time import perf_counter
 from typing import Any, Literal, TypeVar
 from uuid import uuid4
@@ -57,14 +57,20 @@ class AdmissionLimits:
     inflight: int = 16
     followers_per_key: int = 4
     followers: int = 8
+    assembly: int = 2
+    compute: int = 2
+    assembly_queue: int = 8
 
     def __post_init__(self) -> None:
         if not (
-            2 <= self.workers <= 4
-            and 1 <= self.heavy <= max(1, self.workers - 2)
+            2 <= self.workers <= 16
+            and 1 <= self.heavy <= self.compute
+            and 1 <= self.assembly <= self.compute
+            and 1 <= self.compute <= max(1, self.workers - 2)
             and 1 <= self.light < self.workers
             and 0 <= self.heavy_queue <= 16
             and 0 <= self.light_queue <= 16
+            and 0 <= self.assembly_queue <= 16
             and 0 < self.queue_seconds <= 1
             and 1 <= self.inflight <= 64
             and 0 <= self.followers_per_key <= self.followers <= 32
@@ -118,6 +124,11 @@ class QueryAdmission:
         self._followers = self._inflight = 0
         self._control_inflight = 0
         self._closed = False
+        logger.info(
+            "query admission configured limits=%s effective_light=%s",
+            asdict(self.limits),
+            max(1, self.limits.light - 1),
+        )
 
     @asynccontextmanager
     async def request(self, *, protected: bool = False) -> AsyncIterator[None]:
@@ -222,6 +233,7 @@ class QueryAdmission:
     def _start(self, cost: Cost, operation: Callable[[], T], budget: PathBudget) -> _Job:
         maximum = self.limits.inflight + (3 if cost == "control" else 0)
         if self._closed or len(self._jobs) >= maximum:
+            observe("admission.job_rejected")
             raise busy()
         budget.check()
         job = _Job(budget, cost)
@@ -307,7 +319,7 @@ class QueryAdmission:
         queue = self._queues[job.cost]
         maximum = {
             "heavy": self.limits.heavy_queue,
-            "assembly": self.limits.light_queue,
+            "assembly": self.limits.assembly_queue,
             "light": self.limits.light_queue,
             "guard": self.limits.inflight,
             "control": 2,
@@ -354,12 +366,16 @@ class QueryAdmission:
             )
         compute = self._active["heavy"] + self._active["assembly"]
         regular = compute + self._active["light"]
-        limit = self.limits.heavy if cost == "heavy" else max(1, self.limits.light - 1)
-        # 关系计算／装配共享受限名额，另保留普通候选执行机会；总计仍最多4线程。
+        limit = {
+            "heavy": self.limits.heavy,
+            "assembly": self.limits.assembly,
+            "light": max(1, self.limits.light - 1),
+        }[cost]
+        # 计算总额独立于线程数；另保留普通候选与短检查的执行机会。
         return (
             self._active[cost] < limit
             and regular < self.limits.workers - 1
-            and (cost == "light" or compute < max(1, self.limits.workers - 2))
+            and (cost == "light" or compute < self.limits.compute)
         )
 
     async def close(self) -> None:

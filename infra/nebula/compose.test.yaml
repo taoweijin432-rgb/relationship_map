@@ -70,7 +70,7 @@ services:
     <<: *common
     image: vesoft/nebula-graphd:v3.8.0
     mem_limit: 10g
-    cpus: 2
+    cpus: 4
     command:
       - --meta_server_addrs=metad:9559
       - --local_ip=graphd

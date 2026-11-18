@@ -350,11 +350,18 @@ def test_cancelled_shutdown_still_drains_actual_worker():
     "overrides",
     [
         {"workers": 1},
+        {"workers": 17},
         {"heavy": 0},
         {"heavy": 4},
         {"heavy": 3},
         {"light": 4},
         {"heavy_queue": -1},
+        {"assembly": 0},
+        {"assembly": 3},
+        {"compute": 0},
+        {"compute": 3},
+        {"assembly_queue": -1},
+        {"assembly_queue": 17},
         {"queue_seconds": 0},
         {"followers_per_key": 9, "followers": 8},
     ],
@@ -430,7 +437,7 @@ def test_guard_queue_gives_control_priority_on_the_same_reserved_thread():
 
 def test_assembly_queue_is_bounded_and_wait_uses_original_request_deadline():
     async def scenario():
-        admission = QueryAdmission(AdmissionLimits(light_queue=1))
+        admission = QueryAdmission(AdmissionLimits(assembly_queue=1))
         assemblies = [Blocked(), Blocked()]
         tasks = [asyncio.create_task(admission.execute("assembly", work)) for work in assemblies]
         try:
@@ -483,5 +490,122 @@ def test_cancelled_running_assembly_keeps_physical_capacity_until_worker_finishe
             await asyncio.gather(*tasks, return_exceptions=True)
             await admission.close()
         assert all(value == 0 for value in admission.snapshot().values())
+
+    asyncio.run(scenario())
+
+
+def test_resource_configuration_loads_independent_compute_assembly_and_queue_limits(monkeypatch):
+    monkeypatch.setenv("RELATIONSHIP_ADMISSION_WORKERS", "5")
+    monkeypatch.setenv("RELATIONSHIP_ADMISSION_ASSEMBLY", "3")
+    monkeypatch.setenv("RELATIONSHIP_ADMISSION_COMPUTE", "3")
+    monkeypatch.setenv("RELATIONSHIP_ADMISSION_ASSEMBLY_QUEUE", "6")
+    monkeypatch.setenv("RELATIONSHIP_ADMISSION_LIGHT_QUEUE", "1")
+    limits = AdmissionLimits.configured()
+    assert (limits.workers, limits.assembly, limits.compute) == (5, 3, 3)
+    assert (limits.assembly_queue, limits.light_queue) == (6, 1)
+
+
+def test_larger_resource_profile_runs_three_assemblies_and_preserves_light_and_guard():
+    async def scenario():
+        admission = QueryAdmission(AdmissionLimits(workers=5, assembly=3, compute=3))
+        assemblies = [Blocked() for _ in range(3)]
+        light, guard = Blocked(), Blocked()
+        tasks = []
+        try:
+            tasks = [
+                asyncio.create_task(admission.execute("assembly", work)) for work in assemblies
+            ]
+            async with asyncio.timeout(1):
+                await asyncio.gather(*(work.entered.wait() for work in assemblies))
+            waiting = asyncio.create_task(admission.execute("assembly", plan))
+            tasks.append(waiting)
+            await state(admission, "assembly_waiting", 1)
+            tasks += [
+                asyncio.create_task(admission.execute(cost, work))
+                for cost, work in (("light", light), ("guard", guard))
+            ]
+            async with asyncio.timeout(1):
+                await asyncio.gather(light.entered.wait(), guard.entered.wait())
+            assert admission.snapshot()["assembly_active"] == 3
+            assert admission.snapshot()["light_active"] == 1
+            assert admission.snapshot()["guard_active"] == 1
+            tasks[0].cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await tasks[0]
+            assert admission.snapshot()["assembly_active"] == 3
+            assert not waiting.done()
+            assemblies[0].release.set()
+            assert await waiting == plan()
+        finally:
+            for work in [*assemblies, light, guard]:
+                work.release.set()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await admission.close()
+        assert all(value == 0 for value in admission.snapshot().values())
+
+    asyncio.run(scenario())
+
+
+def test_compute_limit_is_shared_by_heavy_and_assembly_without_losing_reserved_capacity():
+    async def scenario():
+        limits = AdmissionLimits(workers=6, heavy=2, assembly=3, compute=3)
+        admission = QueryAdmission(limits)
+        heavy = [Blocked(), Blocked()]
+        assemblies = [Blocked(), Blocked()]
+        light, guard = Blocked(), Blocked()
+        tasks = []
+        try:
+            tasks = [asyncio.create_task(admission.execute("heavy", work)) for work in heavy]
+            async with asyncio.timeout(1):
+                await asyncio.gather(*(work.entered.wait() for work in heavy))
+            tasks.append(asyncio.create_task(admission.execute("assembly", assemblies[0])))
+            await assemblies[0].entered.wait()
+            tasks.append(asyncio.create_task(admission.execute("assembly", assemblies[1])))
+            await state(admission, "assembly_waiting", 1)
+            tasks += [
+                asyncio.create_task(admission.execute(cost, work))
+                for cost, work in (("light", light), ("guard", guard))
+            ]
+            async with asyncio.timeout(1):
+                await asyncio.gather(light.entered.wait(), guard.entered.wait())
+            assert not assemblies[1].entered.is_set()
+            heavy[0].release.set()
+            async with asyncio.timeout(1):
+                await assemblies[1].entered.wait()
+            snapshot = admission.snapshot()
+            assert snapshot["heavy_active"] == 1 and snapshot["assembly_active"] == 2
+            assert snapshot["light_active"] == snapshot["guard_active"] == 1
+        finally:
+            for work in [*heavy, *assemblies, light, guard]:
+                work.release.set()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await admission.close()
+        assert all(value == 0 for value in admission.snapshot().values())
+
+    asyncio.run(scenario())
+
+
+def test_assembly_queue_can_wait_while_light_queue_is_disabled():
+    async def scenario():
+        admission = QueryAdmission(AdmissionLimits(assembly_queue=1, light_queue=0))
+        assemblies = [Blocked(), Blocked()]
+        light = Blocked()
+        tasks = [asyncio.create_task(admission.execute("assembly", work)) for work in assemblies]
+        try:
+            await asyncio.gather(*(work.entered.wait() for work in assemblies))
+            tasks.append(asyncio.create_task(admission.execute("assembly", plan)))
+            await state(admission, "assembly_waiting", 1)
+            tasks.append(asyncio.create_task(admission.execute("light", light)))
+            await light.entered.wait()
+            with pytest.raises(QueryError) as rejected:
+                await admission.execute("light", plan)
+            assert rejected.value.code == "GRAPH_BUSY"
+            assert admission.snapshot()["assembly_waiting"] == 1
+            assert admission.snapshot()["light_waiting"] == 0
+        finally:
+            for work in [*assemblies, light]:
+                work.release.set()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await admission.close()
 
     asyncio.run(scenario())

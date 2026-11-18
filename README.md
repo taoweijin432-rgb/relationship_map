@@ -37,6 +37,8 @@ git show --no-patch qa-20261113-02
 
 2026年11月16日测试服图容器已按终端反馈调整为10GiB／2CPU，当前API关系版本为`real-1e464b2951851301adc2-202611`，6711专家、14364实体、27728事实。对应x86_64部署模板为`infra/nebula/compose.test.yaml`；`infra/nebula/compose.yaml`继续作为本机ARM64实验配置。
 
+2026年11月18日用户确认将测试服graphd由2CPU提高到4CPU，测试模板已同步为10GiB／4CPU；服务器inspect已确认内存10737418240字节、NanoCpus=4000000000且容器Healthy，同负载4CPU接口与原生日志对照已完成，未观察到明显容量提升；应用准入配置保持原值。
+
 48a1adb的有界独占会话、多跳导出连接链复用及进程内ID缓存已完成测试服激活和指定样例验收。后续连接预算、异步准入及查询复用改造已在本机分批提交，尚未部署服务器。缓存默认8MiB、最多1024条、每条不超过128KiB、TTL300秒，仅保存图ID结果；设置`RELATIONSHIP_RELATION_CACHE_BYTES=0`可关闭存储，配置范围0至64MiB。人物展示及删除检查继续在线查询MySQL，图版本核对保持执行。新页首次仍可能读取图，缓存不改变背景筛选和分页顺序。
 
 候选版图会话在借用前回收空闲达到300秒的连接，正在执行的会话继续独占使用。重建连接使用原请求剩余预算；业务查询发生断流或超时时仍明确报错，不自动重跑。
@@ -51,6 +53,9 @@ git show --no-patch qa-20261113-02
 RELATIONSHIP_ADMISSION_WORKERS=4
 RELATIONSHIP_ADMISSION_HEAVY=1
 RELATIONSHIP_ADMISSION_LIGHT=3
+RELATIONSHIP_ADMISSION_ASSEMBLY=2
+RELATIONSHIP_ADMISSION_COMPUTE=2
+RELATIONSHIP_ADMISSION_ASSEMBLY_QUEUE=8
 RELATIONSHIP_ADMISSION_HEAVY_QUEUE=2
 RELATIONSHIP_ADMISSION_LIGHT_QUEUE=8
 RELATIONSHIP_ADMISSION_QUEUE_SECONDS=0.3
@@ -60,7 +65,15 @@ RELATIONSHIP_ADMISSION_FOLLOWERS=8
 RELATIONSHIP_QUERY_LOG_LEVEL=INFO
 ```
 
-4个内部线程中保留1个短版本检查／健康通道，健康任务优先。关系重计算与计划就绪后的装配合计最多2项，默认重计算最多1项，普通人物／实体候选保留执行机会；普通轻操作最多2项，总体始终不超过4线程。热关系计划在装配时实时检查参考人物，未命中的计算开始前也检查身份。普通在途上限包括响应发送阶段，健康请求另有最多3个在途及2个等待的上限。重计算与普通轻操作保持300ms有界等待；计划装配队列最多8项，短版本检查队列受在途上限约束，两者使用入口起算的剩余5秒预算，不在阶段之间延长截止。队列满或短等待超限返回`503 GRAPH_BUSY`和`Retry-After: 1`，整体截止耗尽仍明确报预算错误，客户端应避免并行自动重试。上述调度修正尚待测试服同负载复验。
+默认4个内部线程中保留1个短版本检查／健康通道，健康任务优先。关系重计算与装配合计由`COMPUTE`限制，装配另受`ASSEMBLY`限制，默认均为2；重计算默认最多1项。`ASSEMBLY_QUEUE`独立控制装配等待人数，不再复用`LIGHT_QUEUE`。`LIGHT`沿用已有配置语义，普通轻操作上限为`max(1, LIGHT-1)`，默认2项；装配并发不再从它推导。热关系计划在装配时实时检查参考人物，未命中的计算开始前也检查身份。普通在途上限包括响应发送阶段，健康请求另有最多3个在途及2个等待的上限。重计算与普通轻操作保持300ms有界等待；装配和短版本检查使用入口起算的剩余5秒预算，不在阶段之间延长截止。队列满或短等待超限返回`503 GRAPH_BUSY`和`Retry-After: 1`，整体截止耗尽仍明确报预算错误，客户端应避免并行自动重试。9f5c056已完成服务器同负载验收，新增独立额度配置尚待部署。
+
+按资源调额需要同时考虑应用CPU／内存、graphd与storaged配额、MySQL连接池和每个实例的总请求量，不自动按宿主机CPU数放大。线程参数允许2至16，`HEAVY`和`ASSEMBLY`不能超过`COMPUTE`；4线程及以上必须满足`COMPUTE <= WORKERS-2`，为候选和短检查保留容量。启动日志会打印最终额度和有效轻任务并发，配置非法时拒绝启动。参数允许范围不代表已经通过对应硬件的容量验收。
+
+针对当前应用4vCPU／约8GiB、graphd4vCPU／10GiB、storaged2vCPU／2GiB，首轮候选配置位于`resources/examples/query-admission-graph4cpu.env.example`：工作线程5、装配3、计算总额3、重计算1，等待队列和在途上限保持原值。它是待服务器对照的候选，不是自动启用的默认值；默认配置保留原容量。图RPC槽仍为4、人物MySQL池仍为5，继续加线程需要一起评估这些下游额度。单API进程要求保持，多个进程不能独立复制额度后冒充全局保护。
+
+升级已有自定义配置时，需显式填写新增三项。旧版装配并发取`max(1, LIGHT-1)`、计算总额取`max(1, WORKERS-2)`、装配队列取`LIGHT_QUEUE`；新版分别使用`ASSEMBLY`、`COMPUTE`、`ASSEMBLY_QUEUE`，不再从旧参数自动继承。未配置时使用上面的2／2／8默认值。
+
+服务器额度配置独立保存在`/etc/relationship-map/admission.env`，可按需安装`infra/systemd/relationship-query.service.d/30-admission.conf`加载。先准备配置文件再安装drop-in；不修改夜间程序管理的`query.env`，避免干扰数据发布与回退绑定。只有同步新源码、加载环境并重启后才生效，先在私有候选实例验收，再切公开服务。
 
 请求体上限1MiB。调度、回源、SQL／图和装配共用入口起算5秒预算，子查询不能重新起算；路径入口仍可使用更小的业务预算并返回明确受限状态。阻塞驱动采用协作取消，HTTP超时不等于线程已停止，名额在工作实际结束后归还。启动完整核验和夜间构建不套用交互预算；退出先排空线程，再关闭SQL和图连接。日志记录请求ID、共享任务ID、阶段计时和拒绝原因，`RELATIONSHIP_QUERY_LOG_LEVEL=WARNING`可降低日志量。
 

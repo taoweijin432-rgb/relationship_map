@@ -251,13 +251,19 @@ def test_source_guard_failure_never_sends_the_buffered_success(client, monkeypat
     assert calls == [1, 1]
 
 
-def test_long_assembly_does_not_block_real_suggestions_or_final_source_guard(tmp_path):
+@pytest.mark.parametrize("workers,assemblies", [(4, 2), (5, 3), (8, 6)])
+def test_long_assembly_does_not_block_real_suggestions_or_final_source_guard(
+    tmp_path, monkeypatch, workers, assemblies
+):
+    for name, value in {"WORKERS": workers, "ASSEMBLY": assemblies, "COMPUTE": assemblies}.items():
+        monkeypatch.setenv(f"RELATIONSHIP_ADMISSION_{name}", str(value))
+
     async def scenario():
         app = app_for(tmp_path)
         async with app.router.lifespan_context(app):
             admission = app.state.admission
             loop = asyncio.get_running_loop()
-            entered = [asyncio.Event(), asyncio.Event()]
+            entered = [asyncio.Event() for _ in range(assemblies)]
             release = Event()
             checks = []
 
@@ -273,7 +279,7 @@ def test_long_assembly_does_not_block_real_suggestions_or_final_source_guard(tmp
 
             tasks = [
                 asyncio.create_task(admission.execute("assembly", lambda i=i: blocked(i)))
-                for i in range(2)
+                for i in range(assemblies)
             ]
             try:
                 await asyncio.gather(*(event.wait() for event in entered))
@@ -292,7 +298,7 @@ def test_long_assembly_does_not_block_real_suggestions_or_final_source_guard(tmp
                     )
                 assert all(response.status_code == 200 for response in responses)
                 assert len(checks) == 6, "前后版本检查不能被跳过"
-                assert admission.snapshot()["assembly_active"] == 2
+                assert admission.snapshot()["assembly_active"] == assemblies
             finally:
                 release.set()
                 await asyncio.gather(*tasks)
