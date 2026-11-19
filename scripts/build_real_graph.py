@@ -13,6 +13,7 @@ from relationship_query.infrastructure.member_index import (
 )
 from relationship_query.infrastructure.member_index import (
     index_binding,
+    sync_directory,
 )
 from relationship_query.infrastructure.nebula_lab import (
     DEFAULT_CREDENTIALS,
@@ -220,6 +221,7 @@ def build(output: Path, *, build_member_index: bool = False) -> dict:
         manifest["query_index"] = query_index.model_dump(mode="json")
         manifest["elapsed_seconds"] = round(perf_counter() - started, 3)
     write_json(output / "manifest.json", manifest)
+    sync_directory(output)
     return manifest
 
 

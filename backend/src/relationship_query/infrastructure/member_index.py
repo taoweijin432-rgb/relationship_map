@@ -2,6 +2,7 @@
 
 import json
 import mmap
+import os
 import re
 import struct
 import sys
@@ -78,6 +79,16 @@ def _write_array(path: Path, values: array) -> None:
     with path.open("xb") as stream:
         path.chmod(0o600)
         values.tofile(stream)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def sync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _identity(value: object) -> str:
@@ -143,6 +154,8 @@ def build_member_index(
         },
     )
     write_json(directory / "manifest.json", manifest.model_dump(mode="json"))
+    sync_directory(directory)
+    sync_directory(release)
     receipt = QueryIndexReceipt(manifest_sha256=checksum(directory / "manifest.json"))
     with MemberIndex(release, receipt, binding, maximum_bytes=maximum_bytes):
         pass
