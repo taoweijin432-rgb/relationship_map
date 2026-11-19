@@ -65,7 +65,7 @@ class FakeHost:
         if self.fail == "maintenance":
             raise UpdateError("TEST_GATE_FAILURE", "gate")
 
-    def build(self, directory, log, timeout):
+    def build(self, directory, log, timeout, *, build_member_index=False):
         self.calls.append("build")
         assert not self.running
         assert 0 < timeout <= self.config.build_timeout_seconds
@@ -106,6 +106,7 @@ class FakeHost:
         try:
             assert repository.version == manifest.version
         finally:
+            repository.close_query_index()
             repository.engine.dispose()
 
     def remove_graph(self, space, account):

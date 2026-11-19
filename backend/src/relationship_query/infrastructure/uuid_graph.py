@@ -14,6 +14,10 @@ from relationship_query.domain.models import Person, RelationType
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_client import GraphClient
 from relationship_query.infrastructure.graph_model import literal, read_reader
+from relationship_query.infrastructure.member_traversal import (
+    MemberTraversalView,
+    supports_member_plan,
+)
 from relationship_query.infrastructure.mysql import MySQLPathRepository
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.uuid_api import UUIDRepository
@@ -336,9 +340,7 @@ class MaterializedReader:
             if not set(counts).issubset(set(batch)) or any(n > limit for n in counts.values()):
                 raise QueryError("GRAPH_INTEGRITY", "批量图证据种类、端点或配额异常", 503)
             if limit == 1001 and any(n == limit for n in counts.values()):
-                raise QueryError(
-                    "EVIDENCE_LIMIT", "共同经历超过本地演练上限，请缩小关系范围", 422
-                )
+                raise QueryError("EVIDENCE_LIMIT", "共同经历超过本地演练上限，请缩小关系范围", 422)
             for row in rows:
                 if row["stored_source"] not in (row["left_person"], row["right_person"]):
                     raise QueryError("GRAPH_INTEGRITY", "图证据存储方向异常", 503)
@@ -496,7 +498,21 @@ class MaterializedGraphRepository:
             **scope.model_dump(include=set(RelationScope.model_fields)), max_hops=max_hops
         )
         with self.candidate_session(budget):
-            yield NativeTraversalView(self, reference, request, budget)
+            index = getattr(self.source, "member_index", None)
+            if (
+                index is not None
+                and getattr(self.source, "plan_policy", "release") == "release"
+                and supports_member_plan(scope)
+            ):
+                observe("plan.engine.member")
+                view = MemberTraversalView(index, reference, max_hops, budget)
+                try:
+                    yield view
+                finally:
+                    view.close()
+            else:
+                observe("plan.engine.nebula")
+                yield NativeTraversalView(self, reference, request, budget)
 
     def session(self, budget: PathBudget) -> AbstractContextManager[PathReader]:
         return self.sql.session(budget)

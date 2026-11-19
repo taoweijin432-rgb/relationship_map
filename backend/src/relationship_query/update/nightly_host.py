@@ -27,7 +27,9 @@ class ReleaseHost(Protocol):
     def active(self, timeout: float) -> bool: ...
     def service(self, action: str, timeout: float) -> None: ...
     def maintenance_ready(self, timeout: float) -> None: ...
-    def build(self, directory: Path, log: Path, timeout: float) -> None: ...
+    def build(
+        self, directory: Path, log: Path, timeout: float, *, build_member_index: bool = False
+    ) -> None: ...
     def ready(self, expected: ExpectedRelease, timeout: float) -> None: ...
     def remove_graph(self, space: str, account: str | None) -> None: ...
 
@@ -124,7 +126,9 @@ class SystemdReleaseHost:
                 "NIGHTLY_INPUT_FAILED", "自动采集或输入准备失败，请读取私有input.log"
             ) from None
 
-    def build(self, directory: Path, log: Path, timeout: float) -> None:
+    def build(
+        self, directory: Path, log: Path, timeout: float, *, build_member_index: bool = False
+    ) -> None:
         command = [
             str(self.project / "backend/.venv/bin/python"),
             str(self.project / "scripts/build_real_graph.py"),
@@ -132,6 +136,8 @@ class SystemdReleaseHost:
             str(directory),
             "--build-prepared",
         ]
+        if build_member_index:
+            command.append("--build-member-index")
         log.touch(mode=0o600, exist_ok=False)
         try:
             with log.open("wb") as stream:

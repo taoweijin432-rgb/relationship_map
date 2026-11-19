@@ -36,7 +36,7 @@ def automatic(case, monkeypatch):
     case.host.prepare_input = prepare
     before = case.host.build
 
-    def build(directory, log, timeout):
+    def build(directory, log, timeout, *, build_member_index=False):
         before(directory, log, timeout)
         manifest = json.loads((directory / "manifest.json").read_text())
         manifest["person_display"] = "mysql-live"

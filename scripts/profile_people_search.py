@@ -74,6 +74,7 @@ def main() -> int:
         return int(failed)
     finally:
         if repository is not None:
+            repository.close_query_index()
             repository.engine.dispose()
         engine.dispose()
 

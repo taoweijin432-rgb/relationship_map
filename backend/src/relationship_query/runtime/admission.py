@@ -13,6 +13,8 @@ from time import perf_counter
 from typing import Any, Literal, TypeVar
 from uuid import uuid4
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from relationship_query.domain.path_budget import (
     PathBudget,
     PathBudgetExceeded,
@@ -98,6 +100,8 @@ class _Job:
     started: bool = False
     task: asyncio.Task[Any] | None = None
     shared: bool = False
+    created_at: float = field(default_factory=perf_counter)
+    cancelled_at: float | None = None
 
 
 @dataclass
@@ -272,6 +276,8 @@ class QueryAdmission:
 
     @staticmethod
     def _cancel(job: _Job) -> None:
+        if job.cancelled_at is None:
+            job.cancelled_at = perf_counter()
         job.budget.cancel()
         if not job.started and job.task is not None:
             job.task.cancel()
@@ -293,6 +299,7 @@ class QueryAdmission:
             fact_indexes(),
             using_budget(job.budget),
         ):
+            record_stage("Execution.loop_dispatch_delay", (perf_counter() - job.created_at) * 1000)
             acquired = False
             try:
                 await self._acquire(job)
@@ -322,11 +329,19 @@ class QueryAdmission:
             except asyncio.CancelledError:
                 terminate("cancelled")
                 raise
+            except SQLAlchemyError:
+                terminate("dependency")
+                observe("execution.failed")
+                raise
             except BaseException:
                 terminate("internal_error")
                 observe("execution.failed")
                 raise
             finally:
+                if job.cancelled_at is not None:
+                    record_stage(
+                        "Execution.cancel_response", (perf_counter() - job.cancelled_at) * 1000
+                    )
                 if acquired:
                     async with self._condition:
                         self._active[job.cost] -= 1

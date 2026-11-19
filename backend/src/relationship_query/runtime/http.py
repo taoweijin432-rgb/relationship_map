@@ -60,7 +60,7 @@ class QueryHTTPMiddleware:
                     async with timeout:
                         messages = await self._serve(request, receive, budget)
                 except PathBudgetExceeded as error:
-                    terminate(f"budget.{error.reason}")
+                    terminate(f"budget.{error.reason}", replace=True)
                     observe(f"error.{error.reason}")
                     messages = await self._error(
                         request, "GRAPH_QUERY_LIMIT", f"请求达到预算（{error.label}）", 503
@@ -73,26 +73,28 @@ class QueryHTTPMiddleware:
                         )
                     else:
                         budget.cancel()
-                        terminate("budget.time_limit")
+                        terminate("budget.time_limit", replace=True)
                         observe("error.time_limit")
                         messages = await self._error(
                             request, "GRAPH_QUERY_LIMIT", "请求达到执行时间预算，请稍后重试", 503
                         )
                 except QueryError as error:
-                    terminate(error.reason or error_reason(error.code))
+                    terminate(error.reason or error_reason(error.code), replace=True)
                     observe(f"error.{error.code}")
                     messages = await self._error(request, error.code, error.message, error.status)
                 except SQLAlchemyError:
+                    terminate("dependency", replace=True)
                     logger.exception("query storage failure request_id=%s", trace.request_id)
                     messages = await self._error(
                         request, "STORAGE_UNAVAILABLE", "查询存储暂不可用", 503
                     )
                 except asyncio.CancelledError:
                     budget.cancel()
-                    terminate("cancelled")
+                    terminate("cancelled", replace=True)
                     messages = []
                     cancelled = True
                 except Exception:
+                    terminate("internal_error", replace=True)
                     logger.exception("unexpected query failure request_id=%s", trace.request_id)
                     messages = await self._error(
                         request, "INTERNAL_ERROR", "查询服务发生异常，请稍后重试", 500
@@ -100,7 +102,7 @@ class QueryHTTPMiddleware:
                 try:
                     if not messages:
                         status = 499
-                        terminate("disconnected")
+                        terminate("disconnected", replace=True)
                         return
                     status = messages[0]["status"]
                     headers = list(messages[0].get("headers", []))
@@ -114,6 +116,13 @@ class QueryHTTPMiddleware:
                     messages[0]["headers"] = headers
                     for message in messages:
                         await send(message)
+                except asyncio.CancelledError:
+                    budget.cancel()
+                    terminate("cancelled", replace=True)
+                    raise
+                except Exception:
+                    terminate("send_failure", replace=True)
+                    raise
                 finally:
                     logger.info(
                         "query request completed request_id=%s method=%s route=%s status=%s "

@@ -1,6 +1,7 @@
 """数字更新发布的只读HTTP查询适配，复用SQL筛选及图中物化人物关系。"""
 
 import json
+import os
 from pathlib import Path
 from typing import Literal, cast
 
@@ -24,6 +25,7 @@ from relationship_query.infrastructure.uuid_graph import (
 )
 from relationship_query.infrastructure.uuid_projection import graph_digest, read_all
 from relationship_query.runtime.diagnostics import traced
+from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
 from relationship_query.update.artifacts import artifact_directory, checksum, load_active
 from relationship_query.update.contract import SourceContract
@@ -106,6 +108,9 @@ class NumericRepository(MaterializedSQLRepository):
         self, version: str, source_digest: str, reference_month: int, graph: GraphReceipt
     ) -> None:
         self._graph_receipt = graph
+        self.plan_policy = os.environ.get("RELATIONSHIP_PLAN_ENGINE", "release")
+        if self.plan_policy not in {"release", "nebula"}:
+            raise ValueError("RELATIONSHIP_PLAN_ENGINE必须为release或nebula")
         self.release_key = digest(
             {
                 "semantics": "person-page-v3",
@@ -178,12 +183,21 @@ class NumericRepository(MaterializedSQLRepository):
                 "SOURCE_VERSION_MISMATCH", "数字来源发布已变化，请刷新服务版本", 409
             ) from None
 
+    def close_query_index(self) -> None:
+        index = getattr(self, "member_index", None)
+        if index is not None:
+            index.close()
+
     def graph_repository(self) -> MaterializedGraphRepository:
         paths = SQLitePathRepository(
             self.engine, self.version, self.reference_month, tables=self.tables
         )
         client = NumericGraphClient(self.manifest, self._graph_credentials())
         try:
+            client.relation_cache.close()
+            client.relation_cache = RelationCache.configured(
+                f"relation-v2/{self.release_key}/{self.plan_policy}"
+            )
             graph = MaterializedGraphRepository(self, paths, client)
             plan = json.loads((self.release / "graph-plan.json").read_text())
             self._verify_graph(client, plan)

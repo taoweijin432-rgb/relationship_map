@@ -64,17 +64,23 @@ def job_id() -> str:
     return trace.job_id if trace else "-"
 
 
-def terminate(reason: str) -> None:
-    """首次终止决定唯一归因；后续错误格式化不覆盖原始拒绝点。"""
+def terminate(reason: str, *, replace: bool = False) -> None:
+    """格式化不覆盖细分原因；HTTP最终边界可覆盖已被替换的内部响应。"""
     trace = _current.get()
-    if trace is not None and trace.terminal_reason is None:
+    if trace is not None and (trace.terminal_reason is None or replace):
         trace.terminal_reason = reason
 
 
 def error_reason(code: str) -> str:
+    if code == "INTERNAL_ERROR":
+        return "internal_error"
     if code in {"GRAPH_QUERY_LIMIT", "PERSON_QUERY_LIMIT"}:
         return "budget"
-    if code.endswith("INTEGRITY") or code.endswith("VERSION_MISMATCH"):
+    if (
+        code.endswith("INTEGRITY")
+        or code.endswith("VERSION_MISMATCH")
+        or code == "PERSON_SOURCE_CHANGED"
+    ):
         return "integrity"
     if code.endswith("UNAVAILABLE"):
         return "dependency"

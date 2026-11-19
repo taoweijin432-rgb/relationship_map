@@ -4,9 +4,13 @@ import asyncio
 import logging
 
 import pytest
+from fastapi import FastAPI
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.responses import Response
 
 from relationship_query.runtime.admission import AdmissionLimits, QueryAdmission
 from relationship_query.runtime.diagnostics import DiagnosticTrace, capture, observe, terminate
+from relationship_query.runtime.http import QueryHTTPMiddleware
 from relationship_query.services.query import QueryError
 from tests.test_query_admission import Blocked, state
 
@@ -78,3 +82,62 @@ def test_entry_and_queue_rejections_keep_distinct_causes():
             await admission.close()
 
     asyncio.run(scenario())
+
+
+def test_sql_job_failure_preserves_dependency_classification(caplog):
+    async def scenario():
+        admission = QueryAdmission()
+
+        def failed():
+            raise SQLAlchemyError("private error text")
+
+        try:
+            with pytest.raises(SQLAlchemyError):
+                await admission.execute("light", failed)
+        finally:
+            await admission.close()
+
+    with caplog.at_level(logging.INFO, logger="relationship_query.admission"):
+        asyncio.run(scenario())
+    assert "terminal_reason=dependency" in caplog.text
+    assert "private error text" not in caplog.text
+
+
+def test_response_send_failure_is_not_logged_as_success(caplog, monkeypatch):
+    async def serve(*args):
+        return [
+            {"type": "http.response.start", "status": 200, "headers": []},
+            {"type": "http.response.body", "body": b"ok"},
+        ]
+
+    async def send(message):
+        raise ConnectionError("transport closed")
+
+    async def receive():
+        pytest.fail("mocked serve must not receive")
+
+    async def scenario():
+        app = FastAPI()
+        app.state.admission = QueryAdmission()
+        middleware = QueryHTTPMiddleware(app, lambda *args: Response())
+        scope = {
+            "type": "http",
+            "app": app,
+            "method": "GET",
+            "scheme": "http",
+            "path": "/api/v1/meta",
+            "query_string": b"",
+            "headers": [],
+        }
+        try:
+            with pytest.raises(ConnectionError):
+                await middleware(scope, receive, send)
+            assert app.state.admission.snapshot()["control_inflight"] == 0
+        finally:
+            await app.state.admission.close()
+
+    monkeypatch.setattr(QueryHTTPMiddleware, "_serve", serve)
+    with caplog.at_level(logging.INFO, logger="relationship_query"):
+        asyncio.run(scenario())
+    records = [r.getMessage() for r in caplog.records if "query request completed" in r.message]
+    assert len(records) == 1 and "terminal_reason=send_failure" in records[0]

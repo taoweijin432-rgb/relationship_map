@@ -52,6 +52,7 @@ def profile(config_file: Path, person_id: str) -> bool:
         if graph is not None:
             graph.client.close()
         if repository is not None:
+            repository.close_query_index()
             repository.engine.dispose()
         engine.dispose()
 

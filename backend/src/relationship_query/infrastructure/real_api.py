@@ -9,6 +9,11 @@ from nebula3.Config import Config  # type: ignore[import-untyped]
 from nebula3.gclient.net import ConnectionPool  # type: ignore[import-untyped]
 
 from relationship_query.infrastructure.graph_model import ReaderCredentials, read_reader
+from relationship_query.infrastructure.member_index import (
+    MemberIndex,
+    QueryIndexReceipt,
+    index_binding,
+)
 from relationship_query.infrastructure.nebula_lab import query
 from relationship_query.infrastructure.numeric_api import NumericGraphClient, NumericRepository
 from relationship_query.infrastructure.uuid_projection import graph_digest, read_all
@@ -30,6 +35,7 @@ class RealGraphBuild(UpdateModel):
     validation: dict
     elapsed_seconds: float
     person_display: Literal["snapshot", "mysql-live"] = "snapshot"
+    query_index: QueryIndexReceipt | None = None
 
 
 def file_signature(path: Path) -> tuple[int, int, int, int, int]:
@@ -60,6 +66,11 @@ class RealGraphRepository(NumericRepository):
         self.real_build = RealGraphBuild.model_validate_json(
             (self.release / "manifest.json").read_text()
         )
+        self.member_index: MemberIndex | None = None
+        if self.real_build.query_index is not None:
+            index_directory = self.release / self.real_build.query_index.path
+            for path in (index_directory, *index_directory.iterdir()):
+                self._signatures[path] = file_signature(path)
         prepared = json.loads((self.release / "prepared.json").read_text())
         self._validate_prepared(prepared)
         self.contract_file = self.release / "contract.json"
@@ -72,6 +83,7 @@ class RealGraphRepository(NumericRepository):
             self.real_build.graph,
         )
         try:
+            self._open_member_index()
             expected = (sum(prepared["nodes"].values()), sum(prepared["facts"].values()))
             if expected != (self.real_build.graph.node_count, self.real_build.graph.fact_count):
                 raise ValueError("真实图节点／事实计数与已准备输入不符")
@@ -80,8 +92,28 @@ class RealGraphRepository(NumericRepository):
                 raise ValueError("真实查询SQL计数与图不符")
             self.verify_snapshot()
         except Exception:
+            self.close_query_index()
             self.engine.dispose()
             raise
+
+    def _open_member_index(self) -> None:
+        receipt = self.real_build.query_index
+        if receipt is None:
+            return
+        binding = index_binding(
+            self.release,
+            self.version,
+            self.real_build.source_digest,
+            self.reference_month,
+            self.real_build.graph,
+        )
+        self.member_index = MemberIndex(self.release, receipt, binding)
+        self.release_key = digest(
+            {
+                "release": self.release_key,
+                "query_index": receipt.model_dump(mode="json"),
+            }
+        )
 
     def _validate_prepared(self, prepared: dict) -> None:
         required = {

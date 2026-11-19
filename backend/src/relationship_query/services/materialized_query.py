@@ -63,7 +63,10 @@ class MaterializedQueryService(QueryService):
             return self._select_page(request, reference_id)
         except PathBudgetExceeded as error:
             raise QueryError(
-                "GRAPH_QUERY_LIMIT", f"人物页计划达到预算（{error.label}），请缩小范围", 503
+                "GRAPH_QUERY_LIMIT",
+                f"人物页计划达到预算（{error.label}），请缩小范围",
+                503,
+                reason=f"budget.{error.reason}",
             ) from None
 
     def _select_page(self, request: SearchRequest, reference_id: str | None) -> PersonPagePlan:
@@ -165,9 +168,18 @@ class MaterializedQueryService(QueryService):
             request, candidate_id
         ):
             with shared_relation_budget() as budget:
-                chains = self.graph.shortest_connections(
-                    reference_id, [candidate_id], request, budget
-                )
+                if self.plan_engine is not None:
+                    scope = RelationScope.model_validate(
+                        request.model_dump(include=set(RelationScope.model_fields))
+                    )
+                    with self.plan_engine.open_traversal(
+                        reference_id, scope, request.max_hops, budget
+                    ) as view:
+                        chains = view.chains([candidate_id])
+                else:
+                    chains = self.graph.shortest_connections(
+                        reference_id, [candidate_id], request, budget
+                    )
         plan = PersonPagePlan(
             self.repository.version,
             self.repository.reference_month,

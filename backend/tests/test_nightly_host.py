@@ -128,14 +128,17 @@ def test_systemd_command_scope_and_status(host, monkeypatch, result, expected):
     "behavior,error",
     [("success", None), ("failure", "NIGHTLY_BUILD_FAILED"), ("timeout", "NIGHTLY_BUILD_TIMEOUT")],
 )
-def test_real_build_subprocess_logging_failure_and_timeout(host, tmp_path, behavior, error):
+@pytest.mark.parametrize("indexed", [False, True])
+def test_real_build_subprocess_logging_failure_and_timeout(
+    host, tmp_path, behavior, error, indexed
+):
     python = tmp_path / "backend/.venv/bin/python"
     python.parent.mkdir(parents=True)
     python.symlink_to(sys.executable)
     script = tmp_path / "scripts/build_real_graph.py"
     script.parent.mkdir()
     contents = {
-        "success": "print('test build complete')\n",
+        "success": "import sys\nprint('--build-member-index' in sys.argv)\n",
         "failure": "raise SystemExit(7)\n",
         "timeout": "import time\ntime.sleep(60)\n",
     }
@@ -143,11 +146,16 @@ def test_real_build_subprocess_logging_failure_and_timeout(host, tmp_path, behav
     log = tmp_path / "build.log"
     if error:
         with pytest.raises(UpdateError) as caught:
-            host.build(tmp_path / "candidate", log, 0.05 if behavior == "timeout" else 3)
+            host.build(
+                tmp_path / "candidate",
+                log,
+                0.05 if behavior == "timeout" else 3,
+                build_member_index=indexed,
+            )
         assert caught.value.code == error
     else:
-        host.build(tmp_path / "candidate", log, 3)
-        assert log.read_text().strip() == "test build complete"
+        host.build(tmp_path / "candidate", log, 3, build_member_index=indexed)
+        assert log.read_text().strip() == str(indexed)
     assert log.stat().st_mode & 0o777 == 0o600
 
 

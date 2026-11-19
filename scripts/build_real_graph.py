@@ -8,6 +8,12 @@ from collections import Counter
 from pathlib import Path
 from time import perf_counter
 
+from relationship_query.infrastructure.member_index import (
+    build_member_index as write_member_index,
+)
+from relationship_query.infrastructure.member_index import (
+    index_binding,
+)
 from relationship_query.infrastructure.nebula_lab import (
     DEFAULT_CREDENTIALS,
     connect,
@@ -27,7 +33,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def real_contract(entities: dict, people: dict) -> SourceContract:
-    data = json.loads((ROOT / "resources/examples/update-authoritative-contract-v1.json").read_text())
+    contract_file = ROOT / "resources/examples/update-authoritative-contract-v1.json"
+    data = json.loads(contract_file.read_text())
     data.update(version="real-split-mysql-v2", adapter="numeric-authoritative-v2")
     for logical, binding in data["tables"].items():
         source = entities if logical in ENTITY_TABLES else people
@@ -172,7 +179,7 @@ def verify_graph(output: Path, metadata: dict, receipt) -> dict:
     }
 
 
-def build(output: Path) -> dict:
+def build(output: Path, *, build_member_index: bool = False) -> dict:
     metadata = json.loads((output / "prepared.json").read_text())
     for name, expected in metadata["files"].items():
         if checksum(output / name) != expected:
@@ -201,6 +208,17 @@ def build(output: Path) -> dict:
         elapsed_seconds=round(perf_counter() - started, 3),
         person_display=metadata.get("person_display", "snapshot"),
     )
+    if build_member_index:
+        binding = index_binding(
+            output,
+            metadata["version"],
+            metadata["source_digest"],
+            metadata["reference_month"],
+            receipt,
+        )
+        query_index = write_member_index(output, projection, binding)
+        manifest["query_index"] = query_index.model_dump(mode="json")
+        manifest["elapsed_seconds"] = round(perf_counter() - started, 3)
     write_json(output / "manifest.json", manifest)
     return manifest
 
@@ -212,6 +230,7 @@ def main() -> None:
     parser.add_argument("--reference-month", type=int, default=202611)
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--build-prepared", action="store_true")
+    parser.add_argument("--build-member-index", action="store_true")
     args = parser.parse_args()
     output = args.output.resolve()
     if args.build_prepared:
@@ -237,7 +256,7 @@ def main() -> None:
         flush=True,
     )
     if not args.prepare_only:
-        manifest = build(output)
+        manifest = build(output, build_member_index=args.build_member_index)
         print(json.dumps(manifest, ensure_ascii=False), flush=True)
 
 

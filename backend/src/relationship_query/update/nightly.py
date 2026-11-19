@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from pydantic import Field, model_validator
 
 from relationship_query.infrastructure.graph_model import read_reader
+from relationship_query.infrastructure.member_index import MemberIndex, index_binding
 from relationship_query.infrastructure.real_api import RealGraphBuild
 from relationship_query.update.artifacts import checksum, publisher_lock
 from relationship_query.update.models import GraphReceipt, UpdateError, UpdateModel, digest
@@ -57,6 +58,7 @@ class NightlyConfig(UpdateModel):
     source_config_file: Path | None = None
     input_timeout_seconds: int = Field(default=1800, ge=1)
     insecure_source_tls: bool = False
+    build_member_index: bool = False
 
     @model_validator(mode="after")
     def check_configuration(self) -> "NightlyConfig":
@@ -191,6 +193,16 @@ def verified_release(directory: Path) -> tuple[RealGraphBuild, ExpectedRelease]:
     for name in ("graph/build-resource.json", "graph/reader-credentials.json"):
         if not (directory / name).is_file():
             raise UpdateError("NIGHTLY_RELEASE_INVALID", "真实发布缺少图资源及读取凭据")
+    if manifest.query_index is not None:
+        binding = index_binding(
+            directory,
+            manifest.version,
+            manifest.source_digest,
+            manifest.reference_month,
+            manifest.graph,
+        )
+        with MemberIndex(directory, manifest.query_index, binding):
+            pass
     return manifest, ExpectedRelease(
         version=manifest.version,
         person_count=prepared["nodes"]["person"],
@@ -204,7 +216,10 @@ class NightlyPublisher:
     def __init__(self, config: NightlyConfig, host: ReleaseHost | None = None) -> None:
         self.config = config
         self.host = host or SystemdReleaseHost(
-            config.project_directory, config.query_service, config.api_base_url, config.web_base_url
+            config.project_directory,
+            config.query_service,
+            config.api_base_url,
+            config.web_base_url,
         )
         self.journal = config.state_directory / "operation.json"
         self.deadline = float("inf")
@@ -293,6 +308,7 @@ class NightlyPublisher:
                 and self._source_identities(candidate["sources"])
                 == self._source_identities(old.sources)
                 and candidate.get("person_display", "snapshot") == old.person_display
+                and (not self.config.build_member_index or old.query_index is not None)
             )
             else "update_available",
             "previous_release": str(previous),
@@ -488,12 +504,17 @@ class NightlyPublisher:
             operation = self._save(operation, phase="stopping")
             self.host.service("stop", self._remaining(self.config.service_timeout_seconds))
             operation = self._save(operation, phase="building")
+            previous, _ = verified_release(operation.previous_release)
+            index_required = self.config.build_member_index or previous.query_index is not None
             self.host.build(
                 operation.candidate,
                 operation.candidate.parent / "build.log",
                 self._remaining(self.config.build_timeout_seconds),
+                build_member_index=index_required,
             )
-            _, expected = verified_release(operation.candidate)
+            manifest, expected = verified_release(operation.candidate)
+            if index_required and manifest.query_index is None:
+                raise UpdateError("NIGHTLY_INDEX_REQUIRED", "候选发布缺少必需的同版成员索引")
             operation = self._save(operation, phase="activating")
             self._set_environment(operation, candidate=True)
             operation = self._save(operation, phase="starting")

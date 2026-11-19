@@ -313,11 +313,13 @@ def _numeric_lifespan(app: FastAPI, directory: Path) -> Iterator[None]:
             except Exception:
                 people_engine.dispose()
                 if "source" in locals():
+                    source.close_query_index()
                     source.engine.dispose()
                 raise
         else:
             source = RealGraphRepository(directory)
             if source.real_build.person_display == "mysql-live":
+                source.close_query_index()
                 source.engine.dispose()
                 raise ValueError("此关系发布要求配置在线MySQL人物来源")
     else:
@@ -335,6 +337,7 @@ def _numeric_lifespan(app: FastAPI, directory: Path) -> Iterator[None]:
         yield
     finally:
         _close_graph_client(app)
+        source.close_query_index()
         source.engine.dispose()
         if people_engine is not None:
             people_engine.dispose()

@@ -101,12 +101,14 @@ class GraphClient:
             ):
                 raise PathBudgetExceeded("time_limit") from None
             logger.warning(
-                "graph dependency failure: %s type=%s statement=%s elapsed_ms=%s request_id=%s",
+                "graph dependency failure: %s type=%s statement=%s elapsed_ms=%s "
+                "request_id=%s job_id=%s",
                 type(exc).__name__,
                 exc.type,
                 sha256(statement.encode()).hexdigest()[:16],
                 budget.elapsed_ms(),
                 request_id(),
+                job_id(),
             )
             raise GraphDependencyError() from None
         except (
@@ -118,7 +120,10 @@ class GraphClient:
             RuntimeError,
         ) as exc:
             logger.warning(
-                "graph dependency failure: %s request_id=%s", type(exc).__name__, request_id()
+                "graph dependency failure: %s request_id=%s job_id=%s",
+                type(exc).__name__,
+                request_id(),
+                job_id(),
             )
             budget.check()
             raise GraphDependencyError() from None

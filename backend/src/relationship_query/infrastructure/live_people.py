@@ -178,18 +178,23 @@ class LiveRealGraphRepository(RealGraphRepository):
     def __init__(self, directory: Path, people: MySQLPeople) -> None:
         super().__init__(directory)
         self.people = people
-        with self.engine.connect() as connection:
-            self.published_sources = set(
-                connection.execute(
-                    select(self.tables.sources.c.source)
-                    .join(
-                        self.tables.people,
-                        self.tables.people.c.id == self.tables.sources.c.person_id,
-                    )
-                    .where(self.tables.people.c.active.is_(True))
-                    .distinct()
-                ).scalars()
-            )
+        try:
+            with self.engine.connect() as connection:
+                self.published_sources = set(
+                    connection.execute(
+                        select(self.tables.sources.c.source)
+                        .join(
+                            self.tables.people,
+                            self.tables.people.c.id == self.tables.sources.c.person_id,
+                        )
+                        .where(self.tables.people.c.active.is_(True))
+                        .distinct()
+                    ).scalars()
+                )
+        except BaseException:
+            self.close_query_index()
+            self.engine.dispose()
+            raise
 
     def _members(self, ids: list[str]) -> list[str]:
         if not ids:
