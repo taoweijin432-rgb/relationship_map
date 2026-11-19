@@ -3,6 +3,7 @@
 from collections import defaultdict
 from dataclasses import replace
 from hashlib import sha256
+from typing import cast
 
 from relationship_query.contracts import (
     ConnectionSummary,
@@ -31,7 +32,12 @@ from relationship_query.services.connections import connection_details
 from relationship_query.services.evidence import format_evidence, sort_evidence
 from relationship_query.services.graph import build_graph
 from relationship_query.services.graph_paths import GraphPathService
-from relationship_query.services.ports import MaterializedRelationRepository, QueryRepository
+from relationship_query.services.ports import (
+    BackgroundReader,
+    MaterializedRelationRepository,
+    QueryRepository,
+    RelationPlanEngine,
+)
 from relationship_query.services.query import QueryError, QueryService
 from relationship_query.services.query_plan import (
     PersonPagePlan,
@@ -45,16 +51,34 @@ class MaterializedQueryService(QueryService):
     def __init__(self, repository: QueryRepository, graph: MaterializedRelationRepository) -> None:
         super().__init__(repository)
         self.graph = graph
+        self.plan_engine = (
+            cast(RelationPlanEngine, graph) if hasattr(graph, "open_traversal") else None
+        )
+        self.background = (
+            cast(BackgroundReader, repository) if hasattr(repository, "select_background") else None
+        )
 
     def select_page(self, request: SearchRequest, reference_id: str | None) -> PersonPagePlan:
+        try:
+            return self._select_page(request, reference_id)
+        except PathBudgetExceeded as error:
+            raise QueryError(
+                "GRAPH_QUERY_LIMIT", f"人物页计划达到预算（{error.label}），请缩小范围", 503
+            ) from None
+
+    def _select_page(self, request: SearchRequest, reference_id: str | None) -> PersonPagePlan:
         key = self.plan_key(request, reference_id)
         cache = getattr(self.graph, "cache", None)
         with shared_relation_budget() as budget:
             plan = self._ready_plan(key, budget)
             if plan is not None:
                 return plan
-            plan = super().select_page(request, reference_id)
-            if request.max_hops > 1:
+            if reference_id is not None and self.plan_engine is not None:
+                plan = self._relation_page(request, reference_id, budget)
+            else:
+                # 无中心SQL及历史兼容适配器仍使用其原有入口。
+                plan = super().select_page(request, reference_id)
+            if request.max_hops > 1 and plan.chains is None:
                 assert reference_id is not None
                 chains = self.graph.shortest_connections(
                     reference_id, list(plan.ids), request, budget
@@ -66,6 +90,65 @@ class MaterializedQueryService(QueryService):
                 )
             store_plan(cache, plan, budget)
             return plan
+
+    def _relation_page(
+        self, request: SearchRequest, reference: str, budget: PathBudget
+    ) -> PersonPagePlan:
+        assert self.plan_engine is not None and self.background is not None
+        self._validate_filters(request, reference)
+        fingerprint = self._fingerprint(request, reference)
+        after = self._decode_cursor(request.cursor, fingerprint) if request.cursor else None
+        scope = RelationScope.model_validate(
+            request.model_dump(include=set(RelationScope.model_fields))
+        )
+        found: list[str] = []
+        with self.plan_engine.open_traversal(reference, scope, request.max_hops, budget) as view:
+            while len(found) <= request.page_size:
+                budget.check()
+                block = view.block(after)
+                if not block.ids:
+                    if block.has_more:
+                        raise QueryError("GRAPH_INTEGRITY", "空候选块不能声明后续页", 503)
+                    break
+                if (
+                    list(block.ids) != sorted(set(block.ids))
+                    or len(block.ids) > 128
+                    or reference in block.ids
+                    or (after is not None and block.ids[0] <= after)
+                ):
+                    raise QueryError("GRAPH_INTEGRITY", "候选块人物顺序异常", 503)
+                selected = self.background.select_background(request, list(block.ids))
+                found.extend(self.background.select_active_endpoints(selected))
+                if not block.has_more:
+                    break
+                after = block.ids[-1]
+            ids = found[: request.page_size]
+            chains = view.chains(ids) if request.max_hops > 1 else None
+            if chains is not None and set(chains) != set(ids):
+                raise QueryError("GRAPH_INTEGRITY", "关联候选缺少对应连接链", 503)
+            budget.check()
+        has_more = len(found) > request.page_size
+        return PersonPagePlan(
+            self.repository.version,
+            self.repository.reference_month,
+            reference,
+            fingerprint,
+            tuple(ids),
+            has_more,
+            self._encode_cursor(ids[-1], fingerprint) if has_more else None,
+            query_key=self.plan_key(request, reference),
+            chains=tuple((key, tuple(path)) for key, path in chains.items())
+            if chains is not None
+            else None,
+            probe_id=found[request.page_size] if has_more else None,
+        )
+
+    def plan_key(
+        self, request: SearchRequest, reference_id: str | None, candidate_id: str | None = None
+    ) -> str:
+        prior = super().plan_key(request, reference_id, candidate_id)
+        identity = getattr(self.repository, "release_key", "legacy")
+        return sha256(f"{prior}|person-page-v3|{identity}".encode()).hexdigest()
 
     def select_evidence_plan(
         self, reference_id: str, candidate_id: str, request: SearchRequest
@@ -307,7 +390,8 @@ class MaterializedQueryService(QueryService):
 
     def _fingerprint(self, request: SearchRequest, reference_id: str | None) -> str:
         prior = super()._fingerprint(request, reference_id)
-        return sha256((prior + "|materialized-cursor-v3-hops").encode()).hexdigest()
+        identity = getattr(self.repository, "release_key", "legacy")
+        return sha256(f"{prior}|materialized-cursor-v4|{identity}".encode()).hexdigest()
 
     def _proofs(
         self, pairs: list[tuple[str, str]], views: list[FactView], scope: RelationScope

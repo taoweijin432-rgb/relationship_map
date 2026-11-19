@@ -273,6 +273,20 @@ def call(client, endpoint, body):
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3, 4])
+def test_native_relation_page_does_not_reenter_mixed_recall(native_chain, monkeypatch, depth):
+    def forbidden(*args):
+        pytest.fail("关联页重新调用旧混合召回入口")
+
+    monkeypatch.setattr(native_chain.app.state.query_service.repository, "search_ids", forbidden)
+    data = call(
+        native_chain,
+        "/persons/p:expert:1/relations/search",
+        {"max_hops": depth, "page_size": 2},
+    )
+    assert len(data["items"]) == 2
+
+
+@pytest.mark.parametrize("depth", [1, 2, 3, 4])
 def test_native_combined_details_preserve_scoped_connection(native_chain, depth):
     filters = {"max_hops": depth, "relation_type": "same_company_overlap"}
     reference, candidate = "p:expert:1", "p:expert:3"

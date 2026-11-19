@@ -7,10 +7,30 @@ from sqlalchemy import select
 from relationship_query.contracts import SearchRequest
 from relationship_query.domain.path_budget import relation_query_budget
 from relationship_query.infrastructure.sql_repository import SQLRepository
+from relationship_query.runtime.diagnostics import traced
 
 
 class MaterializedSQLRepository(SQLRepository):
     graph: Any
+
+    @traced("Query.background")
+    def select_background(self, request: SearchRequest, ids: list[str]) -> list[str]:
+        if not ids:
+            return []
+        statement = (
+            select(self.tables.people.c.id)
+            .where(
+                self.tables.people.c.id.in_(ids),
+                self.tables.people.c.active.is_(True),
+                *self._filter_conditions(request),
+            )
+            .order_by(self.tables.people.c.id)
+        )
+        with self.engine.connect() as connection:
+            return list(connection.execute(statement).scalars())
+
+    def select_active_endpoints(self, ids: list[str]) -> list[str]:
+        return ids
 
     def search_ids(
         self, request: SearchRequest, reference_id: str | None, after: str | None
@@ -25,17 +45,7 @@ class MaterializedSQLRepository(SQLRepository):
                 if not block.ids:
                     break
                 batch = list(block.ids)
-                statement = (
-                    select(self.tables.people.c.id)
-                    .where(
-                        self.tables.people.c.id.in_(batch),
-                        self.tables.people.c.active.is_(True),
-                        *self._filter_conditions(request),
-                    )
-                    .order_by(self.tables.people.c.id)
-                )
-                with self.engine.connect() as connection:
-                    found.extend(connection.execute(statement).scalars())
+                found.extend(self.select_background(request, batch))
                 budget.check()
                 if not block.has_more:
                     break

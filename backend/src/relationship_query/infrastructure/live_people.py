@@ -14,6 +14,7 @@ from relationship_query.domain.models import Person, Source
 from relationship_query.domain.path_budget import (
     PathBudget,
     PathBudgetExceeded,
+    relation_query_budget,
     shared_relation_budget,
 )
 from relationship_query.infrastructure.mysql import TLSConnection, _open_mysql_engine
@@ -305,6 +306,14 @@ class LiveRealGraphRepository(RealGraphRepository):
                 "GRAPH_QUERY_LIMIT", f"人物召回达到预算（{error.label}），请缩小查询范围", 503
             ) from None
         return found[: request.page_size + 1]
+
+    @traced("Query.endpoint_validity")
+    def select_active_endpoints(self, ids: list[str]) -> list[str]:
+        budget = relation_query_budget()
+        budget.check()
+        active = self.people.read(ids)
+        budget.check()
+        return [key for key in ids if key in active]
 
     def matches_person(self, request: SearchRequest, reference_id: str, candidate_id: str) -> bool:
         return self.person(candidate_id) is not None and super().matches_person(

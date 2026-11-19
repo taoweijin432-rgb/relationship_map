@@ -10,7 +10,7 @@ from relationship_query.contracts import Evidence, FactView, SearchResponse
 from relationship_query.domain.path_budget import PathBudget
 from relationship_query.runtime.relation_cache import RelationCache
 
-PLAN_CACHE_FORMAT = "http-id-plan-v2"
+PLAN_CACHE_FORMAT = "http-id-plan-v3"
 
 
 @dataclass(frozen=True)

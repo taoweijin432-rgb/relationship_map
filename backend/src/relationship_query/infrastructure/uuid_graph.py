@@ -4,6 +4,7 @@ from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -20,7 +21,7 @@ from relationship_query.infrastructure.uuid_projection import meta_properties
 from relationship_query.runtime.diagnostics import job_id, observe, traced
 from relationship_query.runtime.fact_indexes import FactIndexes, current_fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
-from relationship_query.services.ports import PathReader, PathRepository
+from relationship_query.services.ports import PathReader, PathRepository, TraversalView
 from relationship_query.services.query import QueryError
 
 KINDS = {
@@ -487,6 +488,16 @@ class MaterializedGraphRepository:
         self.cache = client.relation_cache
         self.client.check_version(PathBudget(3000, 5000))
 
+    @contextmanager
+    def open_traversal(
+        self, reference: str, scope: RelationScope, max_hops: int, budget: PathBudget
+    ) -> Iterator[TraversalView]:
+        request = SearchRequest(
+            **scope.model_dump(include=set(RelationScope.model_fields)), max_hops=max_hops
+        )
+        with self.candidate_session(budget):
+            yield NativeTraversalView(self, reference, request, budget)
+
     def session(self, budget: PathBudget) -> AbstractContextManager[PathReader]:
         return self.sql.session(budget)
 
@@ -648,6 +659,20 @@ class MaterializedGraphRepository:
                 1,
             )
             return bool(rows)
+
+
+@dataclass
+class NativeTraversalView:
+    graph: MaterializedGraphRepository
+    reference: str
+    request: SearchRequest
+    budget: PathBudget
+
+    def block(self, after: str | None, size: int = 128) -> NeighborBlock:
+        return self.graph.neighbor_block(self.reference, self.request, after, self.budget, size)
+
+    def chains(self, ids: list[str]) -> dict[str, list[str]]:
+        return self.graph.shortest_connections(self.reference, ids, self.request, self.budget)
 
 
 class UUIDGraphRepository(MaterializedGraphRepository):

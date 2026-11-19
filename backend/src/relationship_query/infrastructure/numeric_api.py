@@ -27,7 +27,7 @@ from relationship_query.runtime.diagnostics import traced
 from relationship_query.services.query import QueryError
 from relationship_query.update.artifacts import artifact_directory, checksum, load_active
 from relationship_query.update.contract import SourceContract
-from relationship_query.update.models import GraphReceipt, UpdateError
+from relationship_query.update.models import GraphReceipt, UpdateError, digest
 
 
 class NumericManifest(ProjectionManifest):
@@ -106,6 +106,17 @@ class NumericRepository(MaterializedSQLRepository):
         self, version: str, source_digest: str, reference_month: int, graph: GraphReceipt
     ) -> None:
         self._graph_receipt = graph
+        self.release_key = digest(
+            {
+                "semantics": "person-page-v3",
+                "version": version,
+                "source_digest": source_digest,
+                "reference_month": reference_month,
+                "graph": graph.model_dump(mode="json"),
+                "sql_sha256": checksum(self.release / "source.sqlite"),
+                "graph_plan_sha256": checksum(self.release / "graph-plan.json"),
+            }
+        )
         engine = create_engine(
             f"sqlite:///file:{self.release / 'source.sqlite'}?mode=ro&uri=true",
             connect_args={"check_same_thread": False},
