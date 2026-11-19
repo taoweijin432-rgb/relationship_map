@@ -3,11 +3,12 @@
 from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import cast
 
 from relationship_query.contracts import FactView, PathRequest, RelationScope, SearchRequest
-from relationship_query.domain.graph_relations import PROOF_PAIR_BATCH, GraphProof, NeighborBlock
+from relationship_query.domain.graph_relations import GraphProof, NeighborBlock
 from relationship_query.domain.models import Person, RelationType
 from relationship_query.domain.path_budget import PathBudget, PathBudgetExceeded
 from relationship_query.infrastructure.graph_client import GraphClient
@@ -16,7 +17,7 @@ from relationship_query.infrastructure.mysql import MySQLPathRepository
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.uuid_api import UUIDRepository
 from relationship_query.infrastructure.uuid_projection import meta_properties
-from relationship_query.runtime.diagnostics import observe, traced
+from relationship_query.runtime.diagnostics import job_id, observe, traced
 from relationship_query.runtime.fact_indexes import FactIndexes, current_fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.ports import PathReader, PathRepository
@@ -34,6 +35,10 @@ FACTS = {
     "same_school": "studied_at",
     "same_major": "studied_major",
 }
+
+_version_checks: ContextVar[tuple[tuple[int, int, str], ...]] = ContextVar(
+    "materialized_version_checks", default=()
+)
 
 
 def relation_scope_key(scope: RelationScope) -> dict:
@@ -320,26 +325,25 @@ class MaterializedReader:
         self, scope: RelationScope, pairs: list[tuple[str, str]], limit: int
     ) -> list[dict]:
         result = []
-        for kind in kinds(scope):
-            maximum = PROOF_PAIR_BATCH if limit <= 21 else 8
-            for batch in proof_batches(kind, scope, pairs, limit, maximum):
-                # Each UNION branch keeps its own ORDER/LIMIT and overflow probe.
-                statement = " UNION ALL ".join(
-                    proof_query(kind, scope, left, right, limit) for left, right in batch
+        for batch in proof_batches(scope, pairs, limit, self.budget):
+            # 每个关系种类／人物对保留独立排序、LIMIT及溢出探针。
+            statement = " UNION ALL ".join(
+                proof_query(kind, scope, left, right, limit) for kind, left, right in batch
+            )
+            rows = self.client.execute(statement, self.budget, len(batch) * limit)
+            counts = Counter((r["kind"], r["left_person"], r["right_person"]) for r in rows)
+            if not set(counts).issubset(set(batch)) or any(n > limit for n in counts.values()):
+                raise QueryError("GRAPH_INTEGRITY", "批量图证据种类、端点或配额异常", 503)
+            if limit == 1001 and any(n == limit for n in counts.values()):
+                raise QueryError(
+                    "EVIDENCE_LIMIT", "共同经历超过本地演练上限，请缩小关系范围", 422
                 )
-                rows = self.client.execute(statement, self.budget, len(batch) * limit)
-                counts = Counter((r["left_person"], r["right_person"]) for r in rows)
-                if not set(counts).issubset(set(batch)) or any(n > limit for n in counts.values()):
-                    raise QueryError("GRAPH_INTEGRITY", "批量图证据端点或配额异常", 503)
-                if limit == 1001 and any(n == limit for n in counts.values()):
-                    raise QueryError(
-                        "EVIDENCE_LIMIT", "共同经历超过本地演练上限，请缩小关系范围", 422
-                    )
-                for row in rows:
-                    if row["stored_source"] != row["left_person"]:
-                        row["left_rank"], row["right_rank"] = row["right_rank"], row["left_rank"]
-                    row["kind"] = kind
-                result.extend(rows)
+            for row in rows:
+                if row["stored_source"] not in (row["left_person"], row["right_person"]):
+                    raise QueryError("GRAPH_INTEGRITY", "图证据存储方向异常", 503)
+                if row["stored_source"] != row["left_person"]:
+                    row["left_rank"], row["right_rank"] = row["right_rank"], row["left_rank"]
+            result.extend(rows)
         return result
 
     @traced("Query.graph_facts")
@@ -384,19 +388,27 @@ class MaterializedReader:
 
 
 def proof_batches(
-    kind: str, scope: RelationScope, pairs: list[tuple[str, str]], limit: int, maximum: int
-) -> Iterator[list[tuple[str, str]]]:
-    batch: list[tuple[str, str]] = []
+    scope: RelationScope, pairs: list[tuple[str, str]], limit: int, budget: PathBudget
+) -> Iterator[list[tuple[str, str, str]]]:
+    if limit < 1:
+        raise ValueError("证据分支上限必须为正数")
+    batch: list[tuple[str, str, str]] = []
     size = 0
-    for pair in pairs:
-        length = len(proof_query(kind, scope, *pair, limit).encode()) + len(" UNION ALL ")
-        if length > 48 * 1024:
-            raise QueryError("GRAPH_QUERY_LIMIT", "图取证语句超过读取边界，请缩小范围", 503)
-        if batch and (len(batch) >= maximum or size + length > 48 * 1024):
-            yield batch
-            batch, size = [], 0
-        batch.append(pair)
-        size += length
+    maximum = 64 if limit <= 21 else 8
+    for kind in kinds(scope):
+        for left, right in pairs:
+            budget.check()
+            length = len(proof_query(kind, scope, left, right, limit).encode())
+            if length > 48 * 1024:
+                raise QueryError("GRAPH_QUERY_LIMIT", "图取证语句超过读取边界，请缩小范围", 503)
+            capacity = min(maximum, (20_000 - budget.graph_rows) // limit)
+            if batch and (len(batch) >= capacity or size + 11 + length > 48 * 1024):
+                yield batch
+                batch, size = [], 0
+            if budget.graph_rows + (len(batch) + 1) * limit > 20_000:
+                raise PathBudgetExceeded("graph_limit")
+            size += length + (11 if batch else 0)
+            batch.append((kind, left, right))
     if batch:
         yield batch
 
@@ -411,7 +423,7 @@ def proof_query(kind: str, scope: RelationScope, left: str, right: str, limit: i
     columns = (
         "id(a) AS left_person,id(b) AS right_person,src(r) AS stored_source,"
         "r.entity_vid AS entity_vid,r.left_fact_rank AS left_rank,"
-        "r.right_fact_rank AS right_rank"
+        f"r.right_fact_rank AS right_rank,{literal(kind)} AS kind"
     )
     if kind == "company_overlap":
         lo, hi = "r.overlap_start_month", "r.overlap_end_month"
@@ -426,6 +438,8 @@ def proof_query(kind: str, scope: RelationScope, left: str, right: str, limit: i
                 f"THEN {hi} ELSE {scope.relation_end_month} END"
             )
         columns += f",{lo} AS lo,{hi} AS hi"
+    else:
+        columns += ",NULL AS lo,NULL AS hi"
     return (
         statement
         + (" RETURN DISTINCT " if scope.require_same_school else " RETURN ")
@@ -478,22 +492,38 @@ class MaterializedGraphRepository:
 
     @contextmanager
     def graph_session(self, budget: PathBudget) -> Iterator[MaterializedReader]:
-        with self.sql.session(budget) as sql:
-            self.client.check_version(budget)
+        with self._version_session(budget), self.sql.session(budget) as sql:
             lookup = (
                 self.source.persons
                 if getattr(self.source, "person_display", "") == "mysql-live"
                 else None
             )
             yield MaterializedReader(sql, self.client, budget, lookup, self.cache)
+
+    @contextmanager
+    def _version_session(self, budget: PathBudget) -> Iterator[None]:
+        root = budget
+        while root.parent is not None:
+            root = root.parent
+        key = (id(self), id(root), job_id())
+        active = _version_checks.get()
+        if key in active:
+            observe("graph.version_nested")
+            yield
+            return
+        self.client.check_version(budget)
+        token = _version_checks.set((*active, key))
+        try:
+            yield
             self.client.check_version(budget)
+        finally:
+            _version_checks.reset(token)
 
     @contextmanager
     def candidate_session(self, budget: PathBudget) -> Iterator[None]:
         try:
-            self.client.check_version(budget)
-            yield
-            self.client.check_version(budget)
+            with self._version_session(budget):
+                yield
         except PathBudgetExceeded as error:
             raise QueryError(
                 "GRAPH_QUERY_LIMIT", f"关联人物查询达到图预算（{error.label}），请缩小范围", 503

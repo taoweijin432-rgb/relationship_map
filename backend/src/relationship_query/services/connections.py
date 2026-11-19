@@ -21,8 +21,9 @@ def connection_details(
         raise QueryError("GRAPH_INTEGRITY", "连接链人物在配套SQL中缺失", 503)
     pairs = sorted({pair for chain in chains.values() for pair in zip(chain, chain[1:])})
     segments = {}
-    for offset in range(0, len(pairs), PROOF_PAIR_BATCH):
-        batch = pairs[offset : offset + PROOF_PAIR_BATCH]
+    pair_window = 50 if evidence_limit <= 20 else PROOF_PAIR_BATCH
+    for offset in range(0, len(pairs), pair_window):
+        batch = pairs[offset : offset + pair_window]
         proofs = reader.read_proofs(request, batch, evidence_limit + 1)
         views = {
             view.fact.id: view
