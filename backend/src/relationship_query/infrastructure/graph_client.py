@@ -26,7 +26,7 @@ from relationship_query.infrastructure.graph_model import (
 )
 from relationship_query.infrastructure.graph_sessions import GraphSession, GraphSessionPool
 from relationship_query.infrastructure.source_graph_model import SourceManifest
-from relationship_query.runtime.diagnostics import observe, request_id, stage, traced
+from relationship_query.runtime.diagnostics import job_id, observe, request_id, stage, traced
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.query import QueryError
 
@@ -67,13 +67,15 @@ class GraphClient:
         if not acquired:
             observe("graph.slot_rejected")
             budget.check()
-            raise QueryError("GRAPH_BUSY", "图查询连接已满，请稍后重试", 503)
+            raise QueryError(
+                "GRAPH_BUSY", "图查询连接已满，请稍后重试", 503, reason="graph_rpc_slot"
+            )
         try:
             result = self._session_result(statement, budget, maximum_rows)
             if not result.is_succeeded():
                 logger.warning(
                     "graph execution rejected code=%s detail=%s statement=%s "
-                    "calls=%s rows=%s elapsed_ms=%s request_id=%s",
+                    "calls=%s rows=%s elapsed_ms=%s request_id=%s job_id=%s",
                     result.error_code(),
                     str(result.error_msg())[:512],
                     sha256(statement.encode()).hexdigest()[:16],
@@ -81,6 +83,7 @@ class GraphClient:
                     budget.graph_rows,
                     budget.elapsed_ms(),
                     request_id(),
+                    job_id(),
                 )
                 raise GraphDependencyError(result.error_code())
             rows = list(result.as_primitive())

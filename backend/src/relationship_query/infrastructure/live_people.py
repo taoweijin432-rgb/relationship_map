@@ -202,9 +202,11 @@ class LiveRealGraphRepository(RealGraphRepository):
                 ).scalars()
             )
 
+    @traced("Query.people")
     def person(self, person_id: str) -> Person | None:
         return self.people.read(self._members([person_id])).get(person_id)
 
+    @traced("Query.people")
     def persons(self, ids: list[str]) -> list[Person]:
         members = self._members(ids)
         people = self.people.read(members)

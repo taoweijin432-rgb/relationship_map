@@ -23,6 +23,7 @@ from relationship_query.infrastructure.uuid_graph import (
     UUIDGraphClient,
 )
 from relationship_query.infrastructure.uuid_projection import graph_digest, read_all
+from relationship_query.runtime.diagnostics import traced
 from relationship_query.services.query import QueryError
 from relationship_query.update.artifacts import artifact_directory, checksum, load_active
 from relationship_query.update.contract import SourceContract
@@ -34,6 +35,7 @@ class NumericManifest(ProjectionManifest):
 
 
 class NumericGraphClient(UUIDGraphClient):
+    @traced("Query.release_verify")
     def check_version(self, budget: PathBudget) -> None:
         rows = self.execute(
             'FETCH PROP ON projection_meta "meta:projection" YIELD properties(vertex) AS meta',

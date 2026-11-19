@@ -29,7 +29,9 @@ from relationship_query.infrastructure.sqlite_paths import SQLitePathRepository
 from relationship_query.runtime.admission import QueryAdmission
 from relationship_query.runtime.diagnostics import (
     configure_logging,
+    error_reason,
     observe,
+    terminate,
 )
 from relationship_query.runtime.diagnostics import (
     request_id as current_request_id,
@@ -346,6 +348,7 @@ def _close_graph_client(app: FastAPI) -> None:
 
 
 def _error(request: Request, code: str, message: str, status: int) -> JSONResponse:
+    terminate(error_reason(code))
     query = getattr(request.app.state, "query_service", None)
     version = query.repository.version if query else None
     return JSONResponse(
@@ -363,6 +366,7 @@ def _error(request: Request, code: str, message: str, status: int) -> JSONRespon
 def _install_handlers(app: FastAPI) -> None:
     @app.exception_handler(QueryError)
     async def query_error(request: Request, exc: QueryError) -> JSONResponse:
+        terminate(exc.reason or error_reason(exc.code))
         observe(f"error.{exc.code}")
         return _error(request, exc.code, exc.message, exc.status)
 

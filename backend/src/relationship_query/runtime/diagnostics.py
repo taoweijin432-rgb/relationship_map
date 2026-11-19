@@ -36,6 +36,8 @@ class DiagnosticTrace:
     request_id: str = "-"
     observations: dict[str, int] = field(default_factory=dict)
     jobs: list[tuple[str, str, str]] = field(default_factory=list)
+    terminal_reason: str | None = None
+    job_id: str = "-"
 
     def totals(self) -> dict[str, dict[str, float | int]]:
         result: dict[str, dict[str, float | int]] = {}
@@ -55,6 +57,28 @@ _current: ContextVar[DiagnosticTrace | None] = ContextVar("query_diagnostic_trac
 def request_id() -> str:
     trace = _current.get()
     return trace.request_id if trace else "-"
+
+
+def job_id() -> str:
+    trace = _current.get()
+    return trace.job_id if trace else "-"
+
+
+def terminate(reason: str) -> None:
+    """首次终止决定唯一归因；后续错误格式化不覆盖原始拒绝点。"""
+    trace = _current.get()
+    if trace is not None and trace.terminal_reason is None:
+        trace.terminal_reason = reason
+
+
+def error_reason(code: str) -> str:
+    if code in {"GRAPH_QUERY_LIMIT", "PERSON_QUERY_LIMIT"}:
+        return "budget"
+    if code.endswith("INTEGRITY") or code.endswith("VERSION_MISMATCH"):
+        return "integrity"
+    if code.endswith("UNAVAILABLE"):
+        return "dependency"
+    return "application_error"
 
 
 def observe(name: str, count: int = 1) -> None:

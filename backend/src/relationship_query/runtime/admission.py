@@ -22,10 +22,12 @@ from relationship_query.domain.path_budget import (
 from relationship_query.runtime.diagnostics import (
     DiagnosticTrace,
     capture,
+    error_reason,
     link_job,
     observe,
     record_stage,
     request_id,
+    terminate,
 )
 from relationship_query.runtime.fact_indexes import fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
@@ -42,8 +44,8 @@ T = TypeVar("T")
 logger = logging.getLogger("relationship_query.admission")
 
 
-def busy() -> QueryError:
-    return QueryError("GRAPH_BUSY", "查询任务已满，请稍后重试", 503)
+def busy(reason: str) -> QueryError:
+    return QueryError("GRAPH_BUSY", "查询任务已满，请稍后重试", 503, reason=reason)
 
 
 @dataclass(frozen=True)
@@ -95,6 +97,7 @@ class _Job:
     identity: str = field(default_factory=lambda: uuid4().hex)
     started: bool = False
     task: asyncio.Task[Any] | None = None
+    shared: bool = False
 
 
 @dataclass
@@ -135,7 +138,7 @@ class QueryAdmission:
         full = self._control_inflight >= 3 if protected else self._inflight >= self.limits.inflight
         if self._closed or full:
             observe("admission.request_rejected")
-            raise busy()
+            raise busy("entry_closed" if self._closed else "entry_limit")
         if protected:
             self._control_inflight += 1
         else:
@@ -181,7 +184,7 @@ class QueryAdmission:
     ) -> PersonPagePlan:
         """只合并ID计划，完成即移除；存储复用仍由已有RelationCache负责。"""
         if self._closed:
-            raise busy()
+            raise busy("entry_closed")
         caller = current_query_budget() or PathBudget(5000, 5000)
         caller.check()
         arguments = [PLAN_CACHE_FORMAT, key]
@@ -200,14 +203,16 @@ class QueryAdmission:
                 store_plan(cache, result, budget)
                 return result
 
-            flight = self._flights[flight_key] = _Flight(self._start("heavy", compute, budget))
+            flight = self._flights[flight_key] = _Flight(
+                self._start("heavy", compute, budget, shared=True)
+            )
         elif (
             flight.waiters == 0
             or flight.followers >= self.limits.followers_per_key
             or self._followers >= self.limits.followers
         ):
             observe("admission.follower_rejected")
-            raise busy()
+            raise busy("follower_limit")
         if follower:
             self._followers += 1
             flight.followers += 1
@@ -230,13 +235,15 @@ class QueryAdmission:
                 else:
                     self._flights.pop(flight_key, None)
 
-    def _start(self, cost: Cost, operation: Callable[[], T], budget: PathBudget) -> _Job:
+    def _start(
+        self, cost: Cost, operation: Callable[[], T], budget: PathBudget, *, shared: bool = False
+    ) -> _Job:
         maximum = self.limits.inflight + (3 if cost == "control" else 0)
         if self._closed or len(self._jobs) >= maximum:
             observe("admission.job_rejected")
-            raise busy()
+            raise busy("entry_closed" if self._closed else "job_cap")
         budget.check()
-        job = _Job(budget, cost)
+        job = _Job(budget, cost, shared=shared)
         self._jobs[job.identity] = job
         job.task = asyncio.create_task(self._work(job, operation))
         job.task.add_done_callback(lambda task: self._finished(job, task))
@@ -247,6 +254,7 @@ class QueryAdmission:
         link_job(job.identity, job.cost, role)
         budget.check()
         timeout = asyncio.timeout(max(0, budget.deadline - budget.clock()))
+        started = perf_counter()
         try:
             async with timeout:
                 result = await asyncio.shield(job.task)
@@ -254,6 +262,11 @@ class QueryAdmission:
             if timeout.expired():
                 raise PathBudgetExceeded("time_limit") from None
             raise
+        finally:
+            record_stage(
+                "Plan.shared_wait" if job.shared else "Execution.wait",
+                (perf_counter() - started) * 1000,
+            )
         budget.check()
         return result
 
@@ -273,8 +286,13 @@ class QueryAdmission:
             task.exception()
 
     async def _work(self, job: _Job, operation: Callable[[], T]) -> T:
-        trace = DiagnosticTrace(request_id=request_id())
-        with capture(trace, include_in_parent=True), fact_indexes(), using_budget(job.budget):
+        trace = DiagnosticTrace(request_id=request_id(), job_id=job.identity)
+        # 共享作业只在job日志计执行量；所有HTTP参与者通过job_id关联等待。
+        with (
+            capture(trace, include_in_parent=not job.shared),
+            fact_indexes(),
+            using_budget(job.budget),
+        ):
             acquired = False
             try:
                 await self._acquire(job)
@@ -294,9 +312,18 @@ class QueryAdmission:
                     self._executor, context.run, run
                 )
             except (QueryError, PathBudgetExceeded) as error:
+                terminate(
+                    error.reason or error_reason(error.code)
+                    if isinstance(error, QueryError)
+                    else f"budget.{error.reason}"
+                )
                 observe(f"error.{error.code if isinstance(error, QueryError) else error.reason}")
                 raise
+            except asyncio.CancelledError:
+                terminate("cancelled")
+                raise
             except BaseException:
+                terminate("internal_error")
                 observe("execution.failed")
                 raise
             finally:
@@ -306,12 +333,13 @@ class QueryAdmission:
                         self._condition.notify_all()
                 logger.info(
                     "query calculation completed request_id=%s job_id=%s cost=%s "
-                    "stages=%s observations=%s",
+                    "stages=%s observations=%s terminal_reason=%s",
                     trace.request_id,
                     job.identity,
                     job.cost,
                     trace.totals(),
                     trace.observations,
+                    trace.terminal_reason or "success",
                 )
 
     async def _acquire(self, job: _Job) -> None:
@@ -331,7 +359,7 @@ class QueryAdmission:
                 return
             if len(queue) >= maximum:
                 observe(f"admission.{job.cost}_queue_rejected")
-                raise busy()
+                raise busy(f"queue_full.{job.cost}")
             queue.append(ticket)
             try:
                 remaining = max(0, job.budget.deadline - job.budget.clock())
@@ -350,10 +378,11 @@ class QueryAdmission:
             except TimeoutError:
                 job.budget.check()
                 observe(f"admission.{job.cost}_queue_timeout")
-                raise busy() from None
+                raise busy(f"queue_timeout.{job.cost}") from None
             finally:
                 queue.remove(ticket)
                 record_stage("Execution.queue_wait", (perf_counter() - started) * 1000)
+                record_stage(f"Execution.{job.cost}_queue", (perf_counter() - started) * 1000)
                 self._condition.notify_all()
 
     def _available(self, cost: Cost) -> bool:

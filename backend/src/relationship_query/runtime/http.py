@@ -18,7 +18,14 @@ from relationship_query.domain.path_budget import (
     shared_relation_budget,
 )
 from relationship_query.runtime.admission import Cost, QueryAdmission
-from relationship_query.runtime.diagnostics import DiagnosticTrace, capture, observe, stage
+from relationship_query.runtime.diagnostics import (
+    DiagnosticTrace,
+    capture,
+    error_reason,
+    observe,
+    stage,
+    terminate,
+)
 from relationship_query.runtime.fact_indexes import fact_indexes
 from relationship_query.services.query import QueryError
 
@@ -38,6 +45,7 @@ class QueryHTTPMiddleware:
         trace = DiagnosticTrace(request_id=uuid4().hex)
         started = perf_counter()
         status = 500
+        cancelled = False
         async with AsyncExitStack() as lifetime:
             with (
                 capture(trace, include_in_parent=True),
@@ -52,6 +60,7 @@ class QueryHTTPMiddleware:
                     async with timeout:
                         messages = await self._serve(request, receive, budget)
                 except PathBudgetExceeded as error:
+                    terminate(f"budget.{error.reason}")
                     observe(f"error.{error.reason}")
                     messages = await self._error(
                         request, "GRAPH_QUERY_LIMIT", f"请求达到预算（{error.label}）", 503
@@ -64,11 +73,13 @@ class QueryHTTPMiddleware:
                         )
                     else:
                         budget.cancel()
+                        terminate("budget.time_limit")
                         observe("error.time_limit")
                         messages = await self._error(
                             request, "GRAPH_QUERY_LIMIT", "请求达到执行时间预算，请稍后重试", 503
                         )
                 except QueryError as error:
+                    terminate(error.reason or error_reason(error.code))
                     observe(f"error.{error.code}")
                     messages = await self._error(request, error.code, error.message, error.status)
                 except SQLAlchemyError:
@@ -78,7 +89,9 @@ class QueryHTTPMiddleware:
                     )
                 except asyncio.CancelledError:
                     budget.cancel()
-                    raise
+                    terminate("cancelled")
+                    messages = []
+                    cancelled = True
                 except Exception:
                     logger.exception("unexpected query failure request_id=%s", trace.request_id)
                     messages = await self._error(
@@ -87,6 +100,7 @@ class QueryHTTPMiddleware:
                 try:
                     if not messages:
                         status = 499
+                        terminate("disconnected")
                         return
                     status = messages[0]["status"]
                     headers = list(messages[0].get("headers", []))
@@ -103,7 +117,7 @@ class QueryHTTPMiddleware:
                 finally:
                     logger.info(
                         "query request completed request_id=%s method=%s route=%s status=%s "
-                        "elapsed_ms=%.2f stages=%s observations=%s jobs=%s",
+                        "elapsed_ms=%.2f stages=%s observations=%s jobs=%s terminal_reason=%s",
                         trace.request_id,
                         request.method,
                         getattr(scope.get("route"), "path", "unmatched"),
@@ -112,7 +126,10 @@ class QueryHTTPMiddleware:
                         trace.totals(),
                         trace.observations,
                         trace.jobs,
+                        trace.terminal_reason or ("success" if status < 400 else "http_error"),
                     )
+                    if cancelled:
+                        raise asyncio.CancelledError
 
     async def _serve(self, request: Request, receive: Receive, budget: PathBudget) -> list[Message]:
         protected = request.url.path in {"/api/v1/health", "/api/v1/meta"}

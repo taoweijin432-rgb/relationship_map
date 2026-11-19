@@ -37,8 +37,11 @@ from relationship_query.services.query_plan import DirectPage, PersonPagePlan, s
 
 
 class QueryError(Exception):
-    def __init__(self, code: str, message: str, status: int = 422) -> None:
+    def __init__(
+        self, code: str, message: str, status: int = 422, *, reason: str | None = None
+    ) -> None:
         self.code, self.message, self.status = code, message, status
+        self.reason = reason
         super().__init__(message)
 
 

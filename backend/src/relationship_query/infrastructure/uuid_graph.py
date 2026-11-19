@@ -16,7 +16,7 @@ from relationship_query.infrastructure.mysql import MySQLPathRepository
 from relationship_query.infrastructure.sql_repository import SQLRepository
 from relationship_query.infrastructure.uuid_api import UUIDRepository
 from relationship_query.infrastructure.uuid_projection import meta_properties
-from relationship_query.runtime.diagnostics import observe
+from relationship_query.runtime.diagnostics import observe, traced
 from relationship_query.runtime.fact_indexes import FactIndexes, current_fact_indexes
 from relationship_query.runtime.relation_cache import RelationCache
 from relationship_query.services.ports import PathReader, PathRepository
@@ -154,6 +154,7 @@ class MaterializedReader:
             ),
         )
 
+    @traced("Query.people")
     def persons(self, ids: list[str]) -> dict[str, Person]:
         if self.person_lookup is not None:
             self.budget.check()
@@ -164,6 +165,7 @@ class MaterializedReader:
             raise RuntimeError("SQL reader required for person details")
         return self.sql.persons(ids)
 
+    @traced("Query.sql_facts")
     def fact_views_by_ids(self, ids: list[str]) -> list[FactView]:
         if self.sql is None:
             raise RuntimeError("SQL reader required for fact details")
@@ -180,6 +182,7 @@ class MaterializedReader:
             lambda: self._shortest_connections(reference, candidates, request),
         )
 
+    @traced("Query.stable_chains")
     def _shortest_connections(
         self, reference: str, candidates: list[str], request: SearchRequest
     ) -> dict[str, list[str]]:
@@ -312,6 +315,7 @@ class MaterializedReader:
             )
         return proofs
 
+    @traced("Query.relation_proofs")
     def _relation_rows(
         self, scope: RelationScope, pairs: list[tuple[str, str]], limit: int
     ) -> list[dict]:
@@ -338,6 +342,7 @@ class MaterializedReader:
                 result.extend(rows)
         return result
 
+    @traced("Query.graph_facts")
     def _facts(self, rows: list[dict]) -> dict[tuple, dict]:
         self.budget.check()
         keys = {
@@ -503,6 +508,7 @@ class MaterializedGraphRepository:
                 None, self.client, budget, cache=self.cache
             ).shortest_connections(reference, candidates, request)
 
+    @traced("Query.candidate_block")
     def neighbor_block(
         self,
         reference: str,
